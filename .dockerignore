@@ -3,16 +3,22 @@
 .vscode
 .cursor
 *.iml
+
+# Frontend build caches (rebuilt inside container)
 frontend/node_modules
 frontend/.angular
 frontend/dist
+frontend/node
+
+# Pre-built classes (rebuilt inside container)
+target
+
+# Runtime data & docs
 data
 docs
 firmware
 agent-transcripts
-frontend/node
-target/classes
-target/test-classes
-target/surefire-reports
+
+# Env files
 .env
 deploy/.env

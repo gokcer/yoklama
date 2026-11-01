@@ -1,0 +1,49 @@
+# Quick-start compose for local development and demos.
+# Usage:
+#   cp .env.example .env   # (optional — defaults work out of the box)
+#   docker compose up --build
+#
+# App:  http://localhost:8080
+# Login: admin / admin123  (or values from .env)
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: yoklama
+      POSTGRES_USER: yoklama
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yoklama -d yoklama"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/yoklama
+      SPRING_DATASOURCE_USERNAME: yoklama
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      APP_MASTER_SECRET: ${APP_MASTER_SECRET:-dGVzdC1tYXN0ZXItc2VjcmV0LWtleS0zMi1ieXRlcyE=}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:8080}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin123}
+      APP_FRAMES_DIR: /app/data/frames
+      TZ: ${TZ:-Europe/Istanbul}
+    volumes:
+      - frame_data:/app/data/frames
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  frame_data:

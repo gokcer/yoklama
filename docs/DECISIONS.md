@@ -56,3 +56,4 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [İnceleme] Dashboard'a arama, bekleyen satırlarda hızlı Onayla/Reddet, gelmeyenler listesi (+manuel ekle), katılım adresi kopyalama, Esc ile dialog kapatma eklendi; başarı mesajı hata bandından ayrıldı
 - [İnceleme] Oturum oluşturma: varsayılan başlık bugünün tarihi; derslik desteklemiyorsa Konum/BLE seçenekleri devre dışı ve OFF'a düşer (sunucu hatası yerine); "Oluştur ve başlat" kısayolu
 - [İnceleme] Admin "Yeni kullanıcı" önceki düzenleme durumunu sıfırlar — önceden düzenlenen kullanıcıyı güncelliyordu
+- [DX] Dockerfile multi-stage build'e çevrildi — checkout eden `docker compose up --build` ile JDK/Node kurmadan başlayabilsin; deploy/ compose'u da aynı Dockerfile'ı kullanıyor

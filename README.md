@@ -1,120 +1,133 @@
-# Yoklama — Dönen QR ile Sınıf Yoklama Sistemi
+# Yoklama — Rotating QR Attendance System
 
-Projeksiyona yansıtılan, saniyede değişen QR kodlarını öğrencilerin telefonlarıyla okutarak sınıf yoklaması alan web tabanlı bir uygulama.
+A web-based classroom attendance system where a projector displays QR codes that refresh every second. Students scan the QR with their phones to check in.
 
-## Mimari
+## Architecture
 
-- **Backend:** Spring Boot 4.1 (Java 21) — REST API, HMAC-SHA256 token doğrulama, karar motoru
-- **Frontend:** Angular 22 — standalone, zoneless, signals; zxing-wasm ile QR çözümleme
-- **Veritabanı:** PostgreSQL (geliştirmede H2 PostgreSQL modunda)
-- **BLE Beacon:** ESP32 (NimBLE) — isteğe bağlı Bluetooth yakınlık doğrulaması
+- **Backend:** Spring Boot 4.1 (Java 21) — REST API, HMAC-SHA256 token verification, decision engine
+- **Frontend:** Angular 22 — standalone, zoneless, signals; QR decoding via zxing-wasm
+- **Database:** PostgreSQL (H2 in PostgreSQL-compatibility mode for local dev)
+- **BLE Beacon:** ESP32 (NimBLE) — optional Bluetooth proximity verification
 
-## Hızlı Başlangıç (Geliştirme)
+## Quick Start with Docker Compose
 
-### Gereksinimler
-- JDK 21+
-- Node.js 24.15+ veya 26+
-- Maven (wrapper dahil)
-
-### Çalıştırma
+The fastest way to run the project. No JDK, Node.js, or database installation required.
 
 ```bash
-# Backend (dev profiliyle H2 veritabanı, otomatik admin kullanıcısı admin/admin123)
+git clone <repo-url> && cd yoklama
+docker compose up --build
+```
+
+That's it. Open **http://localhost:8080** and log in with `admin` / `admin123`.
+
+To customise settings (database password, admin credentials, etc.):
+
+```bash
+cp .env.example .env
+# edit .env as needed
+docker compose up --build
+```
+
+### Default Credentials
+
+| Variable | Default |
+|---|---|
+| `APP_ADMIN_USERNAME` | `admin` |
+| `APP_ADMIN_PASSWORD` | `admin123` |
+| `DB_PASSWORD` | `changeme` |
+
+> **Note:** For production deployments with HTTPS and Caddy, see [Production Deployment](#production-deployment) below.
+
+## Local Development (without Docker)
+
+### Prerequisites
+
+- JDK 21+
+- Node.js 24.15+ or 26+
+- Maven (wrapper included)
+
+### Running
+
+```bash
+# Backend (dev profile with H2 database, auto-created admin user admin/admin123)
 ./mvnw -Pno-frontend spring-boot:run
 
-# Frontend (ayrı terminalde, API proxy 8080'e)
+# Frontend (separate terminal, API proxied to 8080)
 cd frontend && npm start
 ```
 
-Tarayıcıda `http://localhost:4200` adresini açın.
+Open **http://localhost:4200** in your browser.
 
-### Test
+### Testing
 
 ```bash
-# Tüm testler (backend + frontend build + test)
+# Full build + tests (backend + frontend)
 ./mvnw verify
 
-# Yalnızca backend
+# Backend only
 ./mvnw -Pno-frontend test
 
-# Yalnızca frontend
+# Frontend only
 cd frontend && npm test -- --watch=false
 ```
 
-## Üretim (Docker Compose)
+## Production Deployment
+
+The `deploy/` directory contains a production-ready Docker Compose setup with Caddy for automatic HTTPS.
 
 ```bash
 cd deploy
 cp .env.example .env
-# .env dosyasını düzenleyin (DOMAIN, DB_PASSWORD, APP_MASTER_SECRET, APP_ADMIN_PASSWORD)
+# Edit .env — set DOMAIN, DB_PASSWORD, APP_MASTER_SECRET, APP_ADMIN_PASSWORD
 
-# Önce JAR oluşturun
-cd .. && ./mvnw clean package -DskipTests
-cd deploy
-
-# Çalıştırın
-docker compose up -d
+# Build and start
+docker compose up -d --build
 ```
 
-Caddy, `DOMAIN` için otomatik HTTPS sertifikası alır ve `https://<DOMAIN>` adresinden yayın yapar (SSE tamponlaması kapalı).
-Uygulamaya doğrudan erişim yalnızca sunucunun kendisinden `http://127.0.0.1:8080` ile mümkündür; PostgreSQL dışarı açılmaz.
-`DB_PASSWORD`, `APP_MASTER_SECRET` ve `APP_ADMIN_PASSWORD` boşsa compose başlamaz.
+Caddy automatically obtains an HTTPS certificate for the configured `DOMAIN` and serves the app at `https://<DOMAIN>` (SSE buffering disabled).
+Direct access is limited to `http://127.0.0.1:8080` on the host; PostgreSQL is not exposed externally.
+The stack refuses to start if `DB_PASSWORD`, `APP_MASTER_SECRET`, or `APP_ADMIN_PASSWORD` are empty.
 
-### Ortam Değişkenleri
+### Environment Variables
 
-| Değişken | Açıklama |
+| Variable | Description |
 |---|---|
-| `DOMAIN` | Caddy'nin HTTPS sertifikası alacağı alan adı |
-| `APP_MASTER_SECRET` | 32-byte base64 kodlanmış ana anahtar (zorunlu, `openssl rand -base64 32`) |
-| `APP_PUBLIC_BASE_URL` | Herkese açık URL (QR içindeki katılım adresi) |
-| `APP_ADMIN_USERNAME` | İlk admin kullanıcı adı |
-| `APP_ADMIN_PASSWORD` | İlk admin şifresi |
-| `APP_FRAMES_DIR` | Kamera karesi depolama dizini (varsayılan: `./data/frames`) |
-| `TZ` | CSV'deki saatlerin saat dilimi (compose varsayılanı `Europe/Istanbul`) |
+| `DOMAIN` | Domain for Caddy's automatic HTTPS certificate |
+| `APP_MASTER_SECRET` | 32-byte base64-encoded master key (required; `openssl rand -base64 32`) |
+| `APP_PUBLIC_BASE_URL` | Public URL (used inside QR codes for the check-in page) |
+| `APP_ADMIN_USERNAME` | Initial admin username |
+| `APP_ADMIN_PASSWORD` | Initial admin password |
+| `APP_FRAMES_DIR` | Camera frame storage directory (default: `./data/frames`) |
+| `TZ` | Timezone for CSV exports (default: `Europe/Istanbul`) |
 
-## Kullanım Akışı
+## Usage
 
-### Öğretim Üyesi
-1. `/t/login` adresinden giriş yapın
-2. Ders ve öğrenci listesi (roster) oluşturun
-3. Derslik ekleyin (isteğe bağlı: konum, BLE beacon)
-4. Oturum oluşturup "Başlat" ile açın
-5. "Display" butonuyla projeksiyon penceresini açın
-6. Dashboard'dan canlı katılımı takip edin, şüpheli kayıtları değerlendirin
+### Instructor
 
-### Öğrenci
-1. Ana sayfadan 6 haneli katılım kodunu girin
-2. Öğrenci numaranızı girin
-3. "Kamerayı başlat" ile projeksiyondaki QR kodunu okutun
-4. Gerekli sayıda farklı kod okunduğunda yoklama otomatik kaydedilir
+1. Log in at `/t/login`
+2. Create a course and student roster
+3. Add a classroom (optionally with location and BLE beacon)
+4. Create a session and click "Start"
+5. Click "Display" to open the projector window
+6. Monitor live attendance from the dashboard; review flagged records
 
-## Güvenlik
+### Student
 
-- QR tokenları HMAC-SHA256 ile imzalanır; oturum anahtarı yalnızca sunucu ve display arasında paylaşılır
-- İmza karşılaştırmaları sabit zamanlıdır (timing attack koruması)
-- Cihaz çerezi (HttpOnly) ile tekrar kullanım kontrolü
-- Herkese açık POST uç noktaları ve giriş için IP/cihaz bazlı hız sınırı (429 + `Retry-After`)
-- Kamera karesi şeffaf şekilde toplanır, 7 gün sonra otomatik silinir
-- Karar motoru yalnızca bayrak koyar; nihai karar öğretim üyesindedir
-- Öğrenciye hiçbir yanıtta bayraklar, gecikme değerleri veya eşikler gönderilmez
+1. Enter the 6-digit session code on the home page
+2. Enter your student ID
+3. Tap "Start Camera" and scan the QR code on the projector
+4. Attendance is recorded automatically once the required number of distinct codes is scanned
 
-## Manuel Test Listesi
+## Security
 
-- [ ] Tarayıcıda giriş yapılıp ders/roster/derslik/oturum oluşturulabilir
-- [ ] Oturum açılabilir ve display QR gösterir
-- [ ] Display'deki QR her `refreshMs`'de değişir
-- [ ] Öğrenci ana sayfadan kod girip check-in başlatabilir
-- [ ] Kamera ile QR okutulup yoklama alınır (ACCEPTED)
-- [ ] Dashboard'da katılım < 1 sn içinde belirir
-- [ ] Aynı öğrenci numarası ile ikinci deneme ALREADY_CHECKED_IN verir
-- [ ] Aynı cihazdan ikinci deneme DEVICE_ALREADY_USED verir
-- [ ] Roster'da olmayan öğrenci NOT_IN_ROSTER alır (requireRoster=true)
-- [ ] Oturum kapandıktan sonra check-in SESSION_NOT_OPEN verir
-- [ ] CSV indirme Türkçe karakterlerle doğru açılır (Excel, BOM + `;` ayırıcı)
-- [ ] Manuel katılım ekleme ve silme çalışır
-- [ ] Kalibrasyon turu sonrası eşik CALIBRATED olur
-- [ ] Karar (Onayla/Reddet) anında yansır
-- [ ] SSE yeniden bağlanma sonrası liste tazelenir
-- [ ] Display tam ekran ve 'd' tuşu ile debug katmanı çalışır
-- [ ] Kamera izni reddi durumunda uygun hata mesajı gösterilir
-- [ ] 320px genişlikte yatay kaydırma oluşmaz (mobil)
+- QR tokens are signed with HMAC-SHA256; the session key is shared only between server and display
+- Signature comparisons are constant-time (timing attack protection)
+- Device cookie (HttpOnly) prevents reuse
+- IP/device-based rate limiting on public POST endpoints and login (429 + `Retry-After`)
+- Camera frames are collected transparently and auto-deleted after 7 days
+- The decision engine only sets flags; the final decision is always the instructor's
+- Flags, latency values, and thresholds are never sent to student responses
+
+## License
+
+See [LICENSE](LICENSE) for details.
