@@ -1,0 +1,68 @@
+spring:
+  application.name: yoklama
+  profiles.default: dev
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  servlet.multipart:
+    max-file-size: 512KB
+    max-request-size: 1MB
+server:
+  forward-headers-strategy: framework
+  servlet.session:
+    timeout: 12h
+    cookie:
+      http-only: true
+      same-site: lax
+  compression.enabled: true
+management:
+  endpoints.web.exposure.include: health
+  endpoint.health.show-details: never
+
+app:
+  master-secret: ${APP_MASTER_SECRET:}
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  admin:
+    username: ${APP_ADMIN_USERNAME:}
+    password: ${APP_ADMIN_PASSWORD:}
+  privacy-notice: "Doğrulama amacıyla, QR okutulduğu andaki kamera görüntüsü kaydedilir ve 7 gün sonra otomatik silinir."
+  device-cookie:
+    name: YD
+    max-age-days: 400
+    secure: true
+  frames:
+    dir: ${APP_FRAMES_DIR:./data/frames}
+    max-bytes: 300000
+    retention-days: 7
+  retention:
+    attempt-days: 30
+  rate-limit:
+    per-device-per-minute: 120
+    per-ip-per-minute: 1500
+    starts-per-device-per-10min: 10
+    login-per-ip-per-minute: 20
+  ble:
+    service-uuid: 8f3a0001-5c2e-4b7a-9d61-3e0f7a2b9c10
+    nonce-char-uuid: 8f3a0002-5c2e-4b7a-9d61-3e0f7a2b9c10
+    response-char-uuid: 8f3a0003-5c2e-4b7a-9d61-3e0f7a2b9c10
+    nonce-ttl-ms: 60000
+  checkin:
+    defaults:
+      refresh-ms: 1000
+      required-scans: 3
+      max-span-slots: 6
+      max-token-age-ms: 4000
+      latency-margin-ms: 150
+      default-latency-threshold-ms: 450
+      screen-area-ratio-threshold: 0.25
+      duration-minutes: 10
+      geo-mode: "OFF"
+      ble-mode: "OFF"
+      frame-capture: true
+      require-roster: true
+    max-clock-rtt-ms: 800
+    max-geo-accuracy-m: 150
+    ble-clears-latency: true
+    attempt-ttl-seconds: 180
+    student-no-pattern: "^[0-9]{5,12}$"
+    max-scans-per-attempt: 60

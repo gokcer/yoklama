@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "./mvnw",
+      "runtimeArgs": ["-q", "-Pno-frontend", "spring-boot:run"],
+      "port": 8080
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd frontend && PATH=$PWD/node:$PATH npx ng serve --proxy-config proxy.conf.json --port 4200"],
+      "port": 4200
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+---
+description: Yoklama projesi genel kuralları
+alwaysApply: true
+---
+- Bu proje `docs/` altındaki spesifikasyondan uygulanır. Önce `AGENTS.md`, sonra `docs/IMPLEMENTATION_PLAN.md`.
+- Fazları sırayla uygula; her faz sonunda testleri çalıştır ve plandaki kutucukları işaretle.
+- `docs/02-PROTOCOL.md` normatiftir; test vektörleri Java ve TS'de birebir test edilir.
+- Ölçümlerde `Date.now()` yasak; `performance.now()` + `ClockSyncService` offset'i. Sunucuda `Clock` bean'i.
+- Öğrenciye bayrak/gecikme/eşik bilgisi dönme.
+- Belirsizlikte soru sorma; karar ver, `docs/DECISIONS.md`'ye yaz.
+- UI metinleri Türkçe; kod, yorum ve commit mesajları İngilizce.

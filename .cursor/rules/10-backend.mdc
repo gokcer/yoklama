@@ -1,0 +1,13 @@
+---
+description: Spring Boot backend kuralları
+globs: ["src/**/*.java", "src/**/*.yml", "src/**/*.sql", "pom.xml"]
+alwaysApply: false
+---
+- Referans: `docs/05-BACKEND.md`, `docs/03-DATA-MODEL.md`, `docs/04-API.md`, `docs/07-DECISION-ENGINE.md`.
+- Spring Boot 4.1.x, Java 21, Jackson 3 (`tools.jackson.*`). Starter isimlerinde start.spring.io esas.
+- Constructor injection, record DTO'lar, `@Transactional` servis katmanında.
+- Hatalar yalnızca `ApiException(ErrorCode)` ile; yanıt gövdesi `{code, message, details}`.
+- Şema yalnızca Flyway; `ddl-auto=validate`; SQL hem H2 (PostgreSQL modu) hem PostgreSQL uyumlu.
+- Kriptografik karşılaştırmalar `MessageDigest.isEqual`. Anahtar/token loglama yok.
+- Zaman: `Clock` enjekte et, `clock.millis()`; `System.currentTimeMillis()` kullanma.
+- SSE olayları `@TransactionalEventListener(phase = AFTER_COMMIT)` ile.

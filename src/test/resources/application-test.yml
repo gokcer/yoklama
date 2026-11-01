@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:yoklama-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+
+app:
+  master-secret: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+  device-cookie:
+    secure: false
+  admin:
+    username: admin
+    password: admin123

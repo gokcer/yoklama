@@ -1,0 +1,13 @@
+---
+description: Angular frontend kuralları
+globs: ["frontend/**/*.ts", "frontend/**/*.html", "frontend/**/*.scss", "frontend/*.json"]
+alwaysApply: false
+---
+- Referans: `docs/06-FRONTEND.md`, `docs/02-PROTOCOL.md`, `docs/04-API.md`.
+- Angular 22: standalone, zoneless, signals, `inject()`, `@if/@for/@switch`, `input()/output()`.
+- UI kütüphanesi yok; saf SCSS + `styles/_tokens.scss`.
+- QR çözme yalnızca Web Worker'da (`zxing-wasm/reader`); wasm `/zxing/` altından yüklenir.
+- Kare zamanı `requestVideoFrameCallback` metadata'sından (`captureTime` varsa); çözülen karenin zamanı `firstSeenServerMs` olur.
+- Display'de token ve QR bir sonraki slot için önceden hazırlanır; QR `fillRect` ile tam sayı piksel/modül çizilir, ECC M.
+- `localStorage` erişimleri try/catch içinde.
+- Öğrenci sayfası mobil öncelikli, 320 px'te yatay kaydırma yok.
