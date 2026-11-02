@@ -192,6 +192,31 @@ public class SessionService {
         return s;
     }
 
+    @Transactional
+    public ClassSession reopen(long id, int minutes) {
+        ClassSession s = get(id);
+        if (s.getStatus() != SessionStatus.CLOSED) throw new ApiException(ErrorCode.CONFLICT);
+        if (minutes < 1 || minutes > MAX_DURATION) {
+            throw invalid("minutes", "1-" + MAX_DURATION + " arasında olmalı");
+        }
+
+        // Generate a new code so there's no collision with the old (closed) one.
+        s.setCode(codeGen.generate());
+
+        // Re-derive epoch: fresh epoch from now, new token window.
+        long now = clock.millis();
+        long epochStart = Math.ceilDiv(now, 1000L) * 1000L;
+        s.setEpochStartMs(epochStart);
+        s.setOpenedAt(Instant.ofEpochMilli(now));
+        s.setClosesAt(Instant.ofEpochMilli(now).plus(Duration.ofMinutes(minutes)));
+        s.setClosedAt(null);
+        s.setStatus(SessionStatus.OPEN);
+        keyCache.remove(s.getId());
+        sessionRepo.save(s);
+        liveEvents.sessionChanged(s);
+        return s;
+    }
+
     /** Scheduler entry point: no teacher context. */
     @Transactional
     public int closeExpired() {

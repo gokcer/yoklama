@@ -39,6 +39,7 @@ export interface AttendanceDto {
 }
 
 export interface AttemptDto { studentNo: string; resultCode: string; createdAt: string; }
+export interface BulkAttendanceResult { added: number; skipped: number; errors: string[]; }
 
 export interface CalibrationRunDto { id: number; label: string; minLatencyMs: number; maxAreaRatio: number; validScanCount: number; createdAt: string; }
 

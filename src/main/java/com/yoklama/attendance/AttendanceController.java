@@ -26,6 +26,8 @@ public class AttendanceController {
 
     public record DecideRequest(String decision, String note) {}
     public record ManualRequest(String studentNo, String note) {}
+    public record BulkRequest(List<String> studentNumbers, String note) {}
+    public record BulkResultDto(int added, int skipped, List<String> errors) {}
     public record AttemptDto(String studentNo, String resultCode, String createdAt) {}
 
     @GetMapping("/attendances")
@@ -44,6 +46,15 @@ public class AttendanceController {
     @ResponseStatus(HttpStatus.CREATED)
     public AttendanceDto manual(@PathVariable long sessionId, @RequestBody ManualRequest req) {
         return AttendanceDto.from(service.manualAdd(sessionId, req.studentNo(), req.note()));
+    }
+
+    @PostMapping("/attendances/bulk")
+    public BulkResultDto bulkAdd(@PathVariable long sessionId, @RequestBody BulkRequest req) {
+        if (req.studentNumbers() == null || req.studentNumbers().isEmpty()) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, Map.of("studentNumbers", "Liste boş olamaz"));
+        }
+        var result = service.bulkAdd(sessionId, req.studentNumbers(), req.note());
+        return new BulkResultDto(result.added(), result.skipped(), result.errors());
     }
 
     @DeleteMapping("/attendances/{attId}")

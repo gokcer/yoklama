@@ -51,6 +51,7 @@ export class ApiService {
   openSession(id: number) { return firstValueFrom(this.http.post<M.SessionDto>(`/api/sessions/${id}/open`, {})); }
   extendSession(id: number, minutes: number) { return firstValueFrom(this.http.post<M.SessionDto>(`/api/sessions/${id}/extend`, { minutes })); }
   closeSession(id: number) { return firstValueFrom(this.http.post<M.SessionDto>(`/api/sessions/${id}/close`, {})); }
+  reopenSession(id: number, minutes = 15) { return firstValueFrom(this.http.post<M.SessionDto>(`/api/sessions/${id}/reopen`, { minutes })); }
   deleteSession(id: number) { return firstValueFrom(this.http.delete<void>(`/api/sessions/${id}`)); }
   displayConfig(id: number) { return firstValueFrom(this.http.get<M.DisplayConfigDto>(`/api/sessions/${id}/display-config`)); }
 
@@ -58,6 +59,7 @@ export class ApiService {
   getAttendances(sessionId: number) { return firstValueFrom(this.http.get<M.AttendanceDto[]>(`/api/sessions/${sessionId}/attendances`)); }
   decideAttendance(sessionId: number, attId: number, decision: string, note?: string) { return firstValueFrom(this.http.patch<M.AttendanceDto>(`/api/sessions/${sessionId}/attendances/${attId}`, { decision, note })); }
   manualAttendance(sessionId: number, studentNo: string, note?: string) { return firstValueFrom(this.http.post<M.AttendanceDto>(`/api/sessions/${sessionId}/attendances/manual`, { studentNo, note })); }
+  bulkAttendance(sessionId: number, studentNumbers: string[], note?: string) { return firstValueFrom(this.http.post<M.BulkAttendanceResult>(`/api/sessions/${sessionId}/attendances/bulk`, { studentNumbers, note })); }
   deleteAttendance(sessionId: number, attId: number) { return firstValueFrom(this.http.delete<void>(`/api/sessions/${sessionId}/attendances/${attId}`)); }
   getAttempts(sessionId: number, state = 'REJECTED') { return firstValueFrom(this.http.get<M.AttemptDto[]>(`/api/sessions/${sessionId}/attempts`, { params: { state } })); }
 

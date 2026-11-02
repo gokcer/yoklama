@@ -99,6 +99,41 @@ public class AttendanceService {
         return att;
     }
 
+    public record BulkResult(int added, int skipped, List<String> errors) {}
+
+    @Transactional
+    public BulkResult bulkAdd(long sessionId, List<String> studentNumbers, String note) {
+        ClassSession session = sessionService.get(sessionId);
+        int added = 0;
+        int skipped = 0;
+        List<String> errors = new java.util.ArrayList<>();
+        Instant now = Instant.now(clock);
+
+        for (String raw : studentNumbers) {
+            String no = raw.trim();
+            if (no.isEmpty() || no.equals("-")) continue;
+            if (!studentNoPattern.matcher(no).matches()) {
+                errors.add(no + ": Geçersiz format");
+                continue;
+            }
+            if (repo.existsBySession_IdAndStudentNo(sessionId, no)) {
+                skipped++;
+                continue;
+            }
+            String fullName = rosterRepo.findByCourseIdAndStudentNo(session.getCourse().getId(), no)
+                    .map(RosterEntry::getFullName).orElse(null);
+            Attendance att = new Attendance(session, no, AttendanceSource.MANUAL, AttendanceStatus.ACCEPTED, now);
+            att.setFullName(fullName);
+            att.setTeacherDecision(TeacherDecision.APPROVED);
+            att.setTeacherNote(Strings.clip(note, 500));
+            att.setDecidedAt(now);
+            repo.saveAndFlush(att);
+            liveEvents.attendanceChanged(att);
+            added++;
+        }
+        return new BulkResult(added, skipped, errors);
+    }
+
     @Transactional
     public void delete(long sessionId, long attId) {
         Attendance att = find(sessionId, attId);

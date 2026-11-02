@@ -45,6 +45,8 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [İnceleme] Öğrenci akışında kamera, kullanıcı dokunuşu içinde ağ beklemesinden önce açılır (iOS); saat senkronu sonra yapılır
 - [İnceleme] docker-compose: PostgreSQL portu dışarı açılmaz, gizli değerler için varsayılan yok (`${VAR:?}`), Caddy ile HTTPS (09 §2)
 - [İnceleme] ESP32 firmware'i bağlantı başına yanıt saklar (08 §3.2); önceki tek global yanıt eşzamanlı bağlantılarda karışıyordu
+- [Özellik] Toplu yoklama: POST /api/sessions/{id}/attendances/bulk; numara listesi (satır başına bir numara, tire atlanır) manuel APPROVED olarak eklenir; zaten kayıtlı olanlar atlanır
+- [Özellik] Oturumu tekrar açma: POST /api/sessions/{id}/reopen; CLOSED oturum yeni kod ve epoch ile tekrar OPEN yapılır; mevcut kayıtlar korunur, geç gelen öğrenciler eklenebilir
 
 ## İnceleme ve iyileştirme (2026-10-27)
 - [İnceleme] Derslikler "Konumumu kullan": zoneless'ta geolocation geri çağrısı değişiklik algılamayı tetiklemiyordu, alanlar boş görünüyordu — `markForCheck()` ve "Konum alınıyor…" durumu eklendi

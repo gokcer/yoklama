@@ -49,6 +49,7 @@ public class SessionController {
                                        Boolean frameCapture) {}
 
     public record ExtendRequest(@NotNull Integer minutes) {}
+    public record ReopenRequest(Integer minutes) {}
 
     public record CalibRunDto(long id, String label, int minLatencyMs, double maxAreaRatio,
                               int validScanCount, String createdAt) {
@@ -95,6 +96,12 @@ public class SessionController {
     @PostMapping("/{id}/close")
     public SessionDetailDto close(@PathVariable long id) {
         return toDetail(service.close(id));
+    }
+
+    @PostMapping("/{id}/reopen")
+    public SessionDetailDto reopen(@PathVariable long id, @RequestBody(required = false) ReopenRequest req) {
+        int minutes = req != null && req.minutes() != null ? req.minutes() : 15;
+        return toDetail(service.reopen(id, minutes));
     }
 
     @DeleteMapping("/{id}")

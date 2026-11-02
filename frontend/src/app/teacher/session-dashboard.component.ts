@@ -9,7 +9,7 @@ import { formatRemaining } from '../core/slot';
 import { MSG } from '../shared/messages';
 import { errorMessage } from '../shared/errors';
 import { FLAG_LABELS, FLAG_DESCRIPTIONS } from '../shared/flag-labels';
-import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, RosterEntryDto, SessionSseEvent } from '../core/api.models';
+import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, RosterEntryDto, SessionSseEvent, BulkAttendanceResult } from '../core/api.models';
 
 @Component({
   selector: 'app-session-dashboard',
@@ -47,6 +47,7 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
             <a class="btn btn-outline btn-sm" [href]="'/t/sessions/' + s.id + '/display'" target="_blank" rel="noopener">{{ msg.sessions.display }}</a>
             <button class="btn btn-outline btn-sm" (click)="showCalibration()">{{ msg.dashboard.calibration }}</button>
           }
+          @if (s.status === 'CLOSED') { <button class="btn btn-primary btn-sm" (click)="act(reopenSession)">{{ msg.sessions.reopen }}</button> }
           <a class="btn btn-outline btn-sm" [href]="'/api/sessions/' + s.id + '/export.csv'" download>{{ msg.dashboard.downloadCsv }}</a>
           @if (s.status === 'DRAFT') { <button class="btn btn-danger btn-sm" (click)="act(deleteSession)">{{ msg.sessions.delete }}</button> }
         </div>
@@ -110,6 +111,7 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
           <input id="att-search" class="form-input search-input" type="search" placeholder="Numara veya ad ara"
             [value]="search()" (input)="search.set($any($event.target).value)" />
           <span style="flex:1"></span>
+          <button class="btn btn-outline btn-sm" (click)="openBulk()">{{ msg.dashboard.bulkAdd }}</button>
           <button class="btn btn-outline btn-sm" (click)="openManual('')">{{ msg.dashboard.manualAdd }}</button>
         </div>
 
@@ -130,6 +132,38 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
               <div class="dialog-actions">
                 <button class="btn btn-outline" type="button" (click)="showManual.set(false)">İptal</button>
                 <button class="btn btn-primary" type="submit" [disabled]="busy()">Ekle</button>
+              </div>
+            </form>
+          </div>
+        }
+
+        @if (showBulk()) {
+          <div class="dialog-backdrop" (click)="showBulk.set(false)">
+            <form class="dialog" role="dialog" aria-modal="true" aria-labelledby="b-title" style="max-width:480px" (click)="$event.stopPropagation()" (ngSubmit)="addBulk()">
+              <div class="dialog-title" id="b-title">{{ msg.dashboard.bulkAdd }}</div>
+              <div class="form-group">
+                <label for="b-list">Öğrenci Numaraları</label>
+                <textarea id="b-list" class="form-input" [(ngModel)]="bulkText" name="bulkText" rows="12"
+                  [placeholder]="msg.dashboard.bulkPlaceholder" autocomplete="off" autofocus style="font-family:var(--font-mono);font-size:0.9rem"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="b-note">{{ msg.dashboard.note }}</label>
+                <input id="b-note" class="form-input" [(ngModel)]="bulkNote" name="bulkNote" maxlength="500" placeholder="Toplu ekleme" />
+              </div>
+              @if (bulkResult(); as r) {
+                <div class="text-sm mb-md">
+                  <strong>{{ msg.dashboard.bulkResult(r.added, r.skipped) }}</strong>
+                  @if (r.errors.length > 0) {
+                    <ul class="import-errors">
+                      @for (e of r.errors; track $index) { <li>{{ e }}</li> }
+                    </ul>
+                  }
+                </div>
+              }
+              @if (dialogError()) { <p class="form-error" role="alert">{{ dialogError() }}</p> }
+              <div class="dialog-actions">
+                <button class="btn btn-outline" type="button" (click)="showBulk.set(false)">Kapat</button>
+                <button class="btn btn-primary" type="submit" [disabled]="busy() || !bulkText.trim()">Ekle</button>
               </div>
             </form>
           </div>
@@ -275,6 +309,7 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
     .counter-value { font-size: 2rem; font-weight: 700; }
     .table-wrap { overflow-x: auto; }
     .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-xs); }
+    .import-errors { margin: 8px 0 0; padding-left: 20px; max-height: 120px; overflow: auto; color: var(--c-danger); }
   `],
 })
 export class SessionDashboardComponent implements OnInit, OnDestroy {
@@ -303,6 +338,9 @@ export class SessionDashboardComponent implements OnInit, OnDestroy {
   readonly copied = signal(false);
   readonly busy = signal(false);
   manualNo = ''; manualNote = ''; detailNote = '';
+  bulkText = ''; bulkNote = 'Toplu ekleme';
+  readonly showBulk = signal(false);
+  readonly bulkResult = signal<BulkAttendanceResult | null>(null);
   private sseSub: SseSubscription | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private clockReady = false;
@@ -338,6 +376,7 @@ export class SessionDashboardComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown.escape')
   closeDialogs() {
     this.showManual.set(false);
+    this.showBulk.set(false);
     this.calibrationQr.set('');
     this.selectedAtt.set(null);
   }
@@ -431,6 +470,12 @@ export class SessionDashboardComponent implements OnInit, OnDestroy {
     this.info.set(`${r.updated} kayıt yeniden değerlendirildi.`);
   }
 
+  async reopenSession() {
+    if (!confirm(MSG.sessions.reopenConfirm)) return;
+    this.session.set(await this.api.reopenSession(+this.id()));
+    this.connectSse();
+  }
+
   copyJoinUrl(url: string) {
     navigator.clipboard?.writeText(url).then(() => {
       this.copied.set(true);
@@ -474,6 +519,33 @@ export class SessionDashboardComponent implements OnInit, OnDestroy {
       const created = await this.api.manualAttendance(+this.id(), this.manualNo.trim(), this.manualNote || undefined);
       this.manualNo = ''; this.manualNote = ''; this.showManual.set(false);
       this.upsert(created);
+    } catch (e) {
+      this.dialogError.set(errorMessage(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  openBulk() {
+    this.dialogError.set('');
+    this.bulkText = '';
+    this.bulkNote = 'Toplu ekleme';
+    this.bulkResult.set(null);
+    this.showBulk.set(true);
+  }
+
+  async addBulk() {
+    this.dialogError.set('');
+    const lines = this.bulkText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) { this.dialogError.set('Liste boş.'); return; }
+    this.busy.set(true);
+    try {
+      const result = await this.api.bulkAttendance(+this.id(), lines, this.bulkNote || undefined);
+      this.bulkResult.set(result);
+      if (result.added > 0) {
+        await this.load();
+        this.bulkText = '';
+      }
     } catch (e) {
       this.dialogError.set(errorMessage(e));
     } finally {
