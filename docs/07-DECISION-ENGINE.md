@@ -40,6 +40,9 @@ Red durumunda deneme `REJECTED` + `resultCode` olarak kaydedilir ve SSE `attempt
 | `GEO_LOW_ACCURACY` | `geoMode=FLAG`, konum var, `accuracyM > maxGeoAccuracyM` (150) | Konum doğruluğu düşük |
 | `GEO_UNAVAILABLE` | `geoMode=FLAG`, `geo.state ∈ {DENIED, UNSUPPORTED, TIMEOUT}` | Konum alınamadı |
 | `CAMERA_REUSED` | Aynı oturumda aynı `cameraIdHash` başka bir `studentNo`'lu `attendance`'ta var | Aynı kamera başka öğrencide kullanılmış |
+| `DEVICE_SHARED` | Aynı oturumda bu `deviceId` ile **başka bir öğrenci numarasından** yoklama denenmiş (`DEVICE_ALREADY_USED`) | Bu cihazdan başka bir öğrenci numarasıyla da yoklama denenmiş |
+
+`DEVICE_SHARED` `DecisionEngine` tarafından üretilmez (motor veritabanına erişmez, 07 §1): çarpışma `CheckinService`te fark edildiğinde, cihazın **mevcut (ilk)** kaydına sonradan işlenir; `teacherDecision == NONE` ise kayıt `FLAGGED` olur, karar verildiyse karar korunur.
 
 ### 3.1 BLE etkisi
 `bleVerified == true` ise ve `app.checkin.ble-clears-latency=true` (varsayılan) ise `LATENCY_HIGH` ve `SCREEN_SUSPECT` bayrakları **eklenmez** (BLE yakınlığı kanıtladı); metrikler yine kaydedilir. BLE başarısızlığı bayrak üretmez.

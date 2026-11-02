@@ -164,6 +164,8 @@ Sunucu hesaplar; deneme içindeki **en büyük** değer `areaRatioMax`. Projeksi
 - **`YD` çerezi:** Sunucu, `/api/public/**` isteklerinde yoksa üretir: 16 rastgele bayt → base32 (26 karakter). `HttpOnly; Secure (prod); SameSite=Lax; Path=/; Max-Age=400 gün`.
 - **Kamera kimliği:** İstemci `track.getSettings().deviceId` değerinin SHA-256 hex özetini `cameraIdHash` olarak gönderir (değer origin'e özgü ve rastgeledir; özet yalnızca uzunluk normalizasyonu içindir).
 - Oturum başına: aynı `YD` ile ikinci başarılı kayıt yapılamaz (`DEVICE_ALREADY_USED`). Aynı `cameraIdHash` başka öğrenci numarasıyla görülürse `CAMERA_REUSED` bayrağı.
+- Bu reddin izi kaybolmaz: deneme `REJECTED` + `resultCode` olarak **kaydedilir** (`checkin_attempt`), cihazın mevcut kaydı `DEVICE_SHARED` ile işaretlenir (07 §3).
+- **Cihaz ipucu:** Öğretim üyesi arayüzünde `YD` değeri asla gösterilmez; onun yerine `Base32(HMAC-SHA256(k, YD)[:5])` = 8 karakterlik **cihaz ipucu** gösterilir, `k = HMAC-SHA256(masterSecret, "device-hint/v1")`. Aynı telefon aynı ipucunu üretir, ipucundan `YD` geri türetilemez. Öğrenciye giden hiçbir yanıtta yer almaz.
 
 ## 10. BLE challenge-response
 

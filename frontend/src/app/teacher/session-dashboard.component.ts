@@ -248,6 +248,7 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
               }
               @if (a.userAgent) { <div class="text-sm text-secondary mt-md" style="word-break:break-all">{{ a.userAgent }}</div> }
               @if (a.cameraLabel) { <div class="text-sm text-secondary">Kamera: {{ a.cameraLabel }}</div> }
+              @if (a.deviceHint) { <div class="text-sm text-secondary">Cihaz ipucu: <span class="text-mono">{{ a.deviceHint }}</span></div> }
 
               <div class="form-group mt-md">
                 <label for="d-note">{{ msg.dashboard.note }}</label>
@@ -273,10 +274,16 @@ import type { SessionDto, AttendanceDto, AttemptDto, AttemptRejectedEvent, Roste
             <p class="text-sm text-secondary">Yok</p>
           } @else {
             <table>
-              <thead><tr><th>No</th><th>Sebep</th><th>Zaman</th></tr></thead>
+              <thead><tr><th>No</th><th>Sebep</th><th>Cihaz</th><th>Çakışan no</th><th>Zaman</th></tr></thead>
               <tbody>
                 @for (a of attempts(); track $index) {
-                  <tr><td class="text-mono">{{ a.studentNo }}</td><td>{{ reasonLabel(a.resultCode) }}</td><td class="text-sm">{{ formatTime(a.createdAt) }}</td></tr>
+                  <tr>
+                    <td class="text-mono">{{ a.studentNo }}</td>
+                    <td>{{ reasonLabel(a.resultCode) }}</td>
+                    <td class="text-mono text-sm" title="Aynı ipucu aynı telefon">{{ a.deviceHint ?? '-' }}</td>
+                    <td class="text-mono">{{ a.conflictStudentNo ?? '-' }}</td>
+                    <td class="text-sm">{{ formatTime(a.createdAt) }}</td>
+                  </tr>
                 }
               </tbody>
             </table>
@@ -440,7 +447,10 @@ export class SessionDashboardComponent implements OnInit, OnDestroy {
       },
       'attempt-rejected': (data) => {
         const ev = data as AttemptRejectedEvent;
-        this.attempts.update(list => [{ studentNo: ev.studentNo, resultCode: ev.code, createdAt: ev.at }, ...list]);
+        this.attempts.update(list => [{
+          studentNo: ev.studentNo, resultCode: ev.code, deviceHint: ev.deviceHint,
+          conflictStudentNo: ev.conflictStudentNo, createdAt: ev.at,
+        }, ...list]);
       },
       reconnect: () => { this.load().catch(() => undefined); },
     });

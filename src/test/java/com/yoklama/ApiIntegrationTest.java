@@ -3,6 +3,7 @@ package com.yoklama;
 import com.yoklama.crypto.Base32;
 import com.yoklama.crypto.BleChallenge;
 import com.yoklama.live.SseHub;
+import com.yoklama.security.DeviceHint;
 import com.yoklama.security.RateLimitFilter;
 import com.yoklama.support.MutableClock;
 import com.yoklama.support.TestClockConfig;
@@ -70,6 +71,7 @@ class ApiIntegrationTest {
     @Autowired TeacherUserRepository teachers;
     @Autowired PasswordEncoder encoder;
     @Autowired RateLimitFilter rateLimit;
+    @Autowired DeviceHint deviceHint;
     @MockitoSpyBean SseHub sseHub;
 
     @BeforeEach
@@ -524,12 +526,38 @@ class ApiIntegrationTest {
         scanSlots(yd, attemptId, s, 180, SMALL_QR, 2, 3, 4);
         complete(yd, attemptId).andExpect(status().isOk());
 
-        start(yd, s.code(), studentNo())
+        String friendNo = studentNo();
+        start(yd, s.code(), friendNo)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DEVICE_ALREADY_USED"));
         start(newDevice(), s.code(), no)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ALREADY_CHECKED_IN"));
+
+        // Both blocked attempts are visible to the instructor, and they name the phone and the
+        // student whose record already sits on it.
+        JsonNode blocked = null, reused = null;
+        for (JsonNode a : body(mvc.perform(get("/api/sessions/" + s.id() + "/attempts").with(t1()))
+                .andExpect(status().isOk()))) {
+            if ("DEVICE_ALREADY_USED".equals(a.get("resultCode").asString())) blocked = a;
+            if ("ALREADY_CHECKED_IN".equals(a.get("resultCode").asString())) reused = a;
+        }
+        assertNotNull(blocked, "the second check-in on the same phone is recorded");
+        assertEquals(friendNo, blocked.get("studentNo").asString());
+        assertEquals(deviceHint.of(yd.getValue()), blocked.get("deviceHint").asString());
+        assertEquals(no, blocked.get("conflictStudentNo").asString());
+        assertNotNull(reused, "the second check-in of the same number is recorded");
+        assertTrue(reused.get("conflictStudentNo").isNull());
+
+        // The record that owns the phone is flagged and waits for the instructor's decision.
+        JsonNode att = attendance(s.id(), no);
+        assertTrue(att.get("pending").asBoolean());
+        boolean deviceShared = false;
+        for (JsonNode f : att.get("flags")) {
+            deviceShared |= "DEVICE_SHARED".equals(f.asString());
+        }
+        assertTrue(deviceShared, "DEVICE_SHARED expected in " + att.get("flags"));
+        assertEquals(deviceHint.of(yd.getValue()), att.get("deviceHint").asString());
     }
 
     @Test

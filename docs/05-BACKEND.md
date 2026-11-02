@@ -228,6 +228,7 @@ public class SpaWebConfig implements WebMvcConfigurer {
 `DeviceCookieFilter extends OncePerRequestFilter`, yalnızca `/api/public/**`:
 - `YD` çerezi yoksa veya formatı (`^[A-Z2-7]{26}$`) geçersizse: 16 bayt `SecureRandom` → Base32 → `ResponseCookie.from(name, value).httpOnly(true).secure(props.secure).sameSite("Lax").path("/").maxAge(Duration.ofDays(400))`.
 - Değeri `request.setAttribute("deviceId", value)`; controller'lar `@RequestAttribute("deviceId")` ile alır.
+- `DeviceHint` (`security` paketi): `k = HMAC-SHA256(masterSecret, "device-hint/v1")`, `of(YD) = Base32(HMAC-SHA256(k, YD)[:5])` → 8 karakter. Yalnızca öğretim üyesi yanıtlarında (katılım listesi, reddedilen denemeler, CSV) gösterilir; ham `YD` hiçbir API yanıtına girmez, loglanmaz.
 
 ## 7. Rate limit
 `RateLimitFilter` (yalnızca `POST /api/public/**` ve `POST /api/auth/login`):

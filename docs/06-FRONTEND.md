@@ -311,9 +311,9 @@ function tick() {
 - Üst bar: ders, başlık, durum rozeti, kalan süre, **Aç / Uzat (+5 dk) / Kapat**, **Display'i aç** (yeni pencere), **Kalibrasyon** (telefonda açılacak adresin QR'ını gösteren dialog), **CSV indir**, eşik bilgisi ("Gecikme eşiği: 330 ms · kalibre" / "varsayılan").
 - Sayaçlar: Katılan · İnceleme bekleyen · Roster'da olup gelmeyen.
 - Tablo: No, Ad, Saat, Durum (rozet: Kabul / Şüpheli / Onaylandı / Reddedildi / Manuel), bayrak çipleri (Türkçe kısa etiket, `shared/flag-labels.ts`), gecikme (ms, eşik aşımı kırmızı), BLE ikonu. Filtre: Tümü / İnceleme bekleyen / Kabul / Reddedilen. Yeni kayıt satırı kısa süre vurgulanır.
-- Satır detay paneli: kamera karesi (`<img src="/api/sessions/{id}/attendances/{attId}/frame">`), tüm metrikler ve bayrak açıklamaları (07 §3 tablosundaki açıklamalar), user agent, kamera etiketi; **Onayla / Reddet / Kararı kaldır**, not alanı; "Kaydı sil".
+- Satır detay paneli: kamera karesi (`<img src="/api/sessions/{id}/attendances/{attId}/frame">`), tüm metrikler ve bayrak açıklamaları (07 §3 tablosundaki açıklamalar), user agent, kamera etiketi, cihaz ipucu; **Onayla / Reddet / Kararı kaldır**, not alanı; "Kaydı sil".
 - "Manuel ekle" dialog'u (öğrenci no, not).
-- "Reddedilen denemeler" sekmesi (`GET .../attempts?state=REJECTED`).
+- "Reddedilen denemeler" kutusu (`GET .../attempts?state=REJECTED`): No · Sebep · Cihaz (`deviceHint`) · Çakışan no (`conflictStudentNo`) · Saat. `Cihaz` sütunu, aynı telefondan gelen satırları elle eşleştirmeyi gereksiz kılar.
 
 ### 7.3 Kalibrasyon (`CalibrateComponent`) — öğretim üyesinin telefonu
 - Açıklama: "Display açıkken sınıfın önünden, ortasından ve arkasından birer tur okutun."

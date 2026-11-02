@@ -3,6 +3,7 @@ package com.yoklama.attendance;
 import com.yoklama.checkin.AttemptState;
 import com.yoklama.common.ApiException;
 import com.yoklama.common.ErrorCode;
+import com.yoklama.security.DeviceHint;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,33 +20,36 @@ import java.util.Map;
 public class AttendanceController {
 
     private final AttendanceService service;
+    private final DeviceHint deviceHint;
 
-    public AttendanceController(AttendanceService service) {
+    public AttendanceController(AttendanceService service, DeviceHint deviceHint) {
         this.service = service;
+        this.deviceHint = deviceHint;
     }
 
     public record DecideRequest(String decision, String note) {}
     public record ManualRequest(String studentNo, String note) {}
     public record BulkRequest(List<String> studentNumbers, String note) {}
     public record BulkResultDto(int added, int skipped, List<String> errors) {}
-    public record AttemptDto(String studentNo, String resultCode, String createdAt) {}
+    public record AttemptDto(String studentNo, String resultCode, String deviceHint,
+                             String conflictStudentNo, String createdAt) {}
 
     @GetMapping("/attendances")
     public List<AttendanceDto> list(@PathVariable long sessionId) {
-        return service.list(sessionId).stream().map(AttendanceDto::from).toList();
+        return service.list(sessionId).stream().map(this::dto).toList();
     }
 
     @PatchMapping("/attendances/{attId}")
     public AttendanceDto decide(@PathVariable long sessionId, @PathVariable long attId,
                                 @RequestBody DecideRequest req) {
-        return AttendanceDto.from(service.decide(sessionId, attId,
+        return dto(service.decide(sessionId, attId,
                 parse(TeacherDecision.class, req.decision(), "decision"), req.note()));
     }
 
     @PostMapping("/attendances/manual")
     @ResponseStatus(HttpStatus.CREATED)
     public AttendanceDto manual(@PathVariable long sessionId, @RequestBody ManualRequest req) {
-        return AttendanceDto.from(service.manualAdd(sessionId, req.studentNo(), req.note()));
+        return dto(service.manualAdd(sessionId, req.studentNo(), req.note()));
     }
 
     @PostMapping("/attendances/bulk")
@@ -76,13 +80,19 @@ public class AttendanceController {
     public List<AttemptDto> attempts(@PathVariable long sessionId,
                                      @RequestParam(defaultValue = "REJECTED") String state) {
         return service.attempts(sessionId, parse(AttemptState.class, state, "state")).stream()
-                .map(a -> new AttemptDto(a.getStudentNo(), a.getResultCode(), a.getCreatedAt().toString()))
+                .map(v -> new AttemptDto(v.attempt().getStudentNo(), v.attempt().getResultCode(),
+                        deviceHint.of(v.attempt().getDeviceId()), v.conflictStudentNo(),
+                        v.attempt().getCreatedAt().toString()))
                 .toList();
     }
 
     @PostMapping("/reevaluate")
     public Map<String, Integer> reevaluate(@PathVariable long sessionId) {
         return Map.of("updated", service.reevaluate(sessionId));
+    }
+
+    private AttendanceDto dto(Attendance a) {
+        return AttendanceDto.from(a, deviceHint.of(a.getDeviceId()));
     }
 
     private static <E extends Enum<E>> E parse(Class<E> type, String value, String field) {

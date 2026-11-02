@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class AttendanceService {
@@ -39,6 +40,9 @@ public class AttendanceService {
     private final AppProperties props;
     private final Clock clock;
     private final Pattern studentNoPattern;
+
+    /** A rejected/blocked attempt together with the record that collided with it, if any. */
+    public record AttemptView(CheckinAttempt attempt, String conflictStudentNo) {}
 
     public AttendanceService(AttendanceRepository repo, RosterEntryRepository rosterRepo,
                              CheckinAttemptRepository attemptRepo, SessionService sessionService,
@@ -61,9 +65,22 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<CheckinAttempt> attempts(long sessionId, AttemptState state) {
+    public List<AttemptView> attempts(long sessionId, AttemptState state) {
         sessionService.get(sessionId);
-        return attemptRepo.findBySession_IdAndStateOrderByCreatedAtDesc(sessionId, state);
+        List<CheckinAttempt> attempts = attemptRepo.findBySession_IdAndStateOrderByCreatedAtDesc(sessionId, state);
+        if (attempts.isEmpty()) return List.of();
+        // One pass over the records answers "whose attendance sits on this device?" (04 §4.6).
+        Map<String, String> ownerByDevice = repo.findBySession_IdOrderByCreatedAtDesc(sessionId).stream()
+                .filter(a -> a.getDeviceId() != null)
+                .collect(Collectors.toMap(Attendance::getDeviceId, Attendance::getStudentNo, (first, dup) -> first));
+        return attempts.stream().map(a -> new AttemptView(a, conflictOf(a, ownerByDevice))).toList();
+    }
+
+    /** The student number that already holds an attendance on the device of a rejected attempt. */
+    private static String conflictOf(CheckinAttempt attempt, Map<String, String> ownerByDevice) {
+        if (!ErrorCode.DEVICE_ALREADY_USED.name().equals(attempt.getResultCode())) return null;
+        String owner = ownerByDevice.get(attempt.getDeviceId());
+        return owner != null && !owner.equals(attempt.getStudentNo()) ? owner : null;
     }
 
     @Transactional

@@ -14,6 +14,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     Optional<Attendance> findByIdAndSession_Id(long id, long sessionId);
     boolean existsBySession_IdAndStudentNo(long sessionId, String studentNo);
     boolean existsBySession_IdAndDeviceId(long sessionId, String deviceId);
+    Optional<Attendance> findFirstBySession_IdAndDeviceIdOrderByCreatedAtAsc(long sessionId, String deviceId);
     boolean existsBySession_IdAndCameraIdHashAndStudentNoNot(long sessionId, String cameraIdHash, String studentNo);
     long countBySession_Id(long sessionId);
     long countBySession_IdAndStatusAndTeacherDecision(long sessionId, AttendanceStatus status, TeacherDecision decision);

@@ -8,6 +8,7 @@ export const FLAG_LABELS: Record<string, string> = {
   GEO_LOW_ACCURACY: 'Konum belirsiz',
   GEO_UNAVAILABLE: 'Konum yok',
   CAMERA_REUSED: 'Kamera tekrarı',
+  DEVICE_SHARED: 'Cihaz paylaşımı',
 };
 
 /** Dashboard explanations, verbatim from 07 §3. */
@@ -21,4 +22,5 @@ export const FLAG_DESCRIPTIONS: Record<string, string> = {
   GEO_LOW_ACCURACY: 'Konum doğruluğu düşük',
   GEO_UNAVAILABLE: 'Konum alınamadı',
   CAMERA_REUSED: 'Aynı kamera başka öğrencide kullanılmış',
+  DEVICE_SHARED: 'Bu cihazdan başka bir öğrenci numarasıyla da yoklama denenmiş',
 };

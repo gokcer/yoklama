@@ -70,7 +70,7 @@ Hatalar: `SESSION_NOT_FOUND`. `DRAFT` ise `SESSION_NOT_FOUND`; `CLOSED` ise stat
 { "attemptId": "4b0c6f0e-6d5e-4f53-9e3e-0b8a0d7d5b1a", "expiresAt": "2026-10-20T09:03:00Z",
   "studentName": "Ayşe Yılmaz" }
 ```
-Kontroller: oturum OPEN; `studentNo` regex; `requireRoster` ise roster'da olmalı (`studentName` roster'dan, değilse `null`); aynı numarayla `attendance` varsa `ALREADY_CHECKED_IN`; aynı `YD` ile `attendance` varsa `DEVICE_ALREADY_USED`. Aynı cihazın aynı oturumdaki önceki `SCANNING` denemeleri `EXPIRED` yapılır.
+Kontroller: oturum OPEN; `studentNo` regex; `requireRoster` ise roster'da olmalı (`studentName` roster'dan, değilse `null`); aynı numarayla `attendance` varsa `ALREADY_CHECKED_IN`; aynı `YD` ile `attendance` varsa `DEVICE_ALREADY_USED`. Aynı cihazın aynı oturumdaki önceki `SCANNING` denemeleri `EXPIRED` yapılır. `ALREADY_CHECKED_IN` ve `DEVICE_ALREADY_USED` reddinde deneme `REJECTED` + `resultCode` ile kaydedilir (öğretim üyesi "Reddedilen denemeler"de görür) ve `DEVICE_ALREADY_USED` durumunda cihazın mevcut kaydı `DEVICE_SHARED` ile işaretlenir (07 §3).
 
 ### `POST /api/public/checkins/{attemptId}/sync`
 Tarama öncesi senkron sonucunu bildirir (opsiyonel ama istemci her zaman gönderir).
@@ -196,15 +196,16 @@ Sunucu tokenları 02 §7'ye göre doğrular (yaş kontrolü hariç değil — ka
   "pending": true, "minLatencyMs": 512, "latencyThresholdMs": 330, "thresholdSource": "CALIBRATED",
   "areaRatioMax": 0.031, "areaThreshold": 0.25, "geoState": "OK", "geoDistanceM": 18.2,
   "geoAccuracyM": 24.0, "clockRttMs": 88, "bleVerified": false, "hasFrame": true,
-  "userAgent": "…", "cameraLabel": "Arka Kamera", "teacherNote": null,
+  "userAgent": "…", "cameraLabel": "Arka Kamera", "deviceHint": "K4F7QZ2M", "teacherNote": null,
   "createdAt": "…", "decidedAt": null }
 ```
+`deviceHint` 02 §9'daki cihaz ipucudur (yalnızca öğretim üyesi yanıtında; manuel/toplu kayıtlarda `null`).
 - `PATCH /api/sessions/{id}/attendances/{attId}` `{decision: "APPROVED"|"REJECTED"|"NONE", note?}`
 - `POST /api/sessions/{id}/attendances/manual` `{studentNo, note?}` → `source=MANUAL, status=ACCEPTED, decision=APPROVED`
 - `DELETE /api/sessions/{id}/attendances/{attId}` (yanlış kaydı silmek için; kare dosyası da silinir)
 - `GET /api/sessions/{id}/attendances/{attId}/frame` → `image/jpeg` (`Cache-Control: private, max-age=3600`)
-- `GET /api/sessions/{id}/attempts?state=REJECTED` → reddedilen denemeler (öğrenci no, sebep, zaman) — inceleme için
-- `GET /api/sessions/{id}/export.csv` → `text/csv; charset=UTF-8`, BOM'lu, ayırıcı `;`. Sütunlar: `ogrenciNo;adSoyad;durum;katildi;bayraklar;gecikmeMs;esikMs;kaynak;zaman;not`. Roster varsa listede olup gelmeyenler de `durum=GELMEDI` olarak eklenir.
+- `GET /api/sessions/{id}/attempts?state=REJECTED` → reddedilen denemeler `[{studentNo, resultCode, deviceHint, conflictStudentNo, createdAt}]` — inceleme için. `deviceHint` 02 §9'daki 8 karakterlik cihaz ipucudur (aynı telefondan gelen kayıtları gruplamak için); `conflictStudentNo` yalnızca `DEVICE_ALREADY_USED` satırlarında dolu olup o cihazda yoklaması olan öğrenci numarasıdır.
+- `GET /api/sessions/{id}/export.csv` → `text/csv; charset=UTF-8`, BOM'lu, ayırıcı `;`. Sütunlar: `ogrenciNo;adSoyad;durum;katildi;bayraklar;gecikmeMs;esikMs;kaynak;zaman;not;cihazIpucu`. Roster varsa listede olup gelmeyenler de `durum=GELMEDI` olarak eklenir.
 
 ### 4.7 Canlı olaylar (SSE)
 `GET /api/sessions/{id}/events` → `text/event-stream`
@@ -213,7 +214,7 @@ Sunucu tokenları 02 §7'ye göre doğrular (yaş kontrolü hariç değil — ka
 | `attendance` | `AttendanceDto` (oluşturma veya güncelleme) |
 | `attendance-deleted` | `{id}` |
 | `session` | `{status, closesAt, attendanceCount, flaggedPendingCount}` |
-| `attempt-rejected` | `{studentNo, code, at}` |
+| `attempt-rejected` | `{studentNo, code, deviceHint, conflictStudentNo, at}` |
 
 15 sn'de bir yorum satırı (`: ping`) gönderilir. Emitter zaman aşımı 30 dk; istemci `EventSource` ile otomatik yeniden bağlanır ve yeniden bağlanınca listeyi REST ile tazeler.
 

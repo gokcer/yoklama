@@ -5,6 +5,7 @@ import com.yoklama.attendance.AttendanceDto;
 import com.yoklama.attendance.AttendanceRepository;
 import com.yoklama.attendance.AttendanceStatus;
 import com.yoklama.attendance.TeacherDecision;
+import com.yoklama.security.DeviceHint;
 import com.yoklama.session.ClassSession;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -24,14 +25,18 @@ public class LiveEvents {
 
     private final ApplicationEventPublisher publisher;
     private final AttendanceRepository attendanceRepo;
+    private final DeviceHint deviceHint;
 
-    public LiveEvents(ApplicationEventPublisher publisher, AttendanceRepository attendanceRepo) {
+    public LiveEvents(ApplicationEventPublisher publisher, AttendanceRepository attendanceRepo,
+                      DeviceHint deviceHint) {
         this.publisher = publisher;
         this.attendanceRepo = attendanceRepo;
+        this.deviceHint = deviceHint;
     }
 
     public void attendanceChanged(Attendance a) {
-        publisher.publishEvent(new LiveEvent(a.getSessionId(), "attendance", AttendanceDto.from(a)));
+        publisher.publishEvent(new LiveEvent(a.getSessionId(), "attendance",
+                AttendanceDto.from(a, deviceHint.of(a.getDeviceId()))));
         sessionChanged(a.getSession());
     }
 
@@ -50,8 +55,14 @@ public class LiveEvents {
         publisher.publishEvent(new LiveEvent(s.getId(), "session", data));
     }
 
-    public void attemptRejected(long sessionId, String studentNo, String code, Instant at) {
-        publisher.publishEvent(new LiveEvent(sessionId, "attempt-rejected",
-                Map.of("studentNo", studentNo, "code", code, "at", at.toString())));
+    public void attemptRejected(long sessionId, String studentNo, String code, String deviceId,
+                                String conflictStudentNo, Instant at) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("studentNo", studentNo);
+        data.put("code", code);
+        data.put("deviceHint", deviceHint.of(deviceId));
+        data.put("conflictStudentNo", conflictStudentNo);
+        data.put("at", at.toString());
+        publisher.publishEvent(new LiveEvent(sessionId, "attempt-rejected", data));
     }
 }

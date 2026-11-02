@@ -72,3 +72,10 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [İnceleme] Admin "Yeni kullanıcı" önceki düzenleme durumunu sıfırlar — önceden düzenlenen kullanıcıyı güncelliyordu
 - [DX] Dockerfile multi-stage build'e çevrildi — checkout eden `docker compose up --build` ile JDK/Node kurmadan başlayabilsin; deploy/ compose'u da aynı Dockerfile'ı kullanıyor
 - [Özellik] Dönen QR içeriği düz token yerine URL: `{baseUrl}/q/{token}` — genel telefon kamerası ile tarandığında site açılır; QR sürüm 2→4 (25×25→33×33) olur, hâlâ rahatça taranır. Base URL istemcinin gelen isteğindeki `X-Forwarded-*` başlıklarından türetilir (hardcoded `APP_PUBLIC_BASE_URL` yedeği korunur); böylece ters proxy arkasında (yoklama.armikom.com) veya localhost'ta doğru URL üretilir
+
+## Cihaz takibi ve istismar önleme (2026-11-02)
+- [Özellik] Cihaz ipucu: `k = HMAC-SHA256(masterSecret, "device-hint/v1")`, `ipucu = Base32(HMAC-SHA256(k, YD)[:5])` = 8 karakter — aynı telefon her oturumda aynı ipucunu üretir, `YD` geri türetilemez; ham cihaz kimliği hiçbir API yanıtında/CSV'de görünmez, öğrenciye hiç gönderilmez
+- [Özellik] `DEVICE_SHARED` bayrağı: aynı oturumda bir cihazın sahibine (o `deviceId` ile ilk `attendance`) sonradan işlenir; `DecisionEngine` DB'ye erişmediği için bayrak `CheckinService`te çarpışma fark edildiğinde yazılır — kararı olmayan kayıt `FLAGGED` olur, kararı olan kararını korur
+- [Özellik] Engellenen check-in'ler iz bırakır: `ALREADY_CHECKED_IN` / `DEVICE_ALREADY_USED` reddinde deneme `REJECTED` + `resultCode` ile kaydedilir; engelleyen istek exception ile rollback olduğu için kanıt `PROPAGATION_REQUIRES_NEW` transaction'da yazılır
+- [Özellik] `attempt-rejected` SSE olayı ve `GET /api/sessions/{id}/attempts` yanıtı `deviceHint` + `conflictStudentNo` taşır; dashboard "Reddedilen denemeler" tablosunda cihaz ipucu ve cihazın sahibi olan numara gösterilir, kayıt detayında cihaz ipucu görünür
+- [Özellik] CSV'ye son sütun olarak `cihazIpucu` eklendi (11 sütun); bayrak/gecikme/eşik değerleri öğrenciye hâlâ gönderilmiyor

@@ -9,5 +9,6 @@ public enum Flag {
     GEO_OUTSIDE,
     GEO_LOW_ACCURACY,
     GEO_UNAVAILABLE,
-    CAMERA_REUSED
+    CAMERA_REUSED,
+    DEVICE_SHARED
 }

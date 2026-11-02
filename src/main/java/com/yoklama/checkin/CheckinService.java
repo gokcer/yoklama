@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -57,6 +58,8 @@ public class CheckinService {
     private final AppProperties props;
     private final Clock clock;
     private final TransactionTemplate tx;
+    /** Writes the evidence of a blocked check-in; survives the rollback of the rejected request. */
+    private final TransactionTemplate newTx;
     private final Pattern studentNoPattern;
     private final SecureRandom random = new SecureRandom();
 
@@ -79,6 +82,8 @@ public class CheckinService {
         this.props = props;
         this.clock = clock;
         this.tx = new TransactionTemplate(txManager);
+        this.newTx = new TransactionTemplate(txManager);
+        this.newTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.studentNoPattern = Pattern.compile(props.checkin().studentNoPattern());
     }
 
@@ -108,10 +113,12 @@ public class CheckinService {
             throw new ApiException(ErrorCode.NOT_IN_ROSTER);
         }
         if (attendanceRepo.existsBySession_IdAndStudentNo(session.getId(), no)) {
-            throw new ApiException(ErrorCode.ALREADY_CHECKED_IN);
+            throw rejectAtStart(session.getId(), no, deviceId, ip, userAgent, now,
+                    ErrorCode.ALREADY_CHECKED_IN);
         }
         if (attendanceRepo.existsBySession_IdAndDeviceId(session.getId(), deviceId)) {
-            throw new ApiException(ErrorCode.DEVICE_ALREADY_USED);
+            throw rejectAtStart(session.getId(), no, deviceId, ip, userAgent, now,
+                    ErrorCode.DEVICE_ALREADY_USED);
         }
 
         attemptRepo.findBySession_IdAndDeviceIdAndState(session.getId(), deviceId, AttemptState.SCANNING)
@@ -123,6 +130,53 @@ public class CheckinService {
         attemptRepo.save(attempt);
 
         return new StartResult(attempt.getId(), expiresAt, entry.map(RosterEntry::getFullName).orElse(null));
+    }
+
+    /**
+     * Rejects a check-in that was blocked before an attempt existed (04 §2). The caller's transaction is
+     * rolled back by the exception, so the evidence is written in its own transaction: the rejected
+     * attempt, the {@code DEVICE_SHARED} flag on the record that owns the device (07 §3), and the SSE
+     * events. Without this the instructor would never learn that a phone was used for two numbers.
+     */
+    private ApiException rejectAtStart(long sessionId, String studentNo, String deviceId, String ip,
+                                       String userAgent, Instant now, ErrorCode code) {
+        newTx.executeWithoutResult(status -> {
+            CheckinAttempt blocked = new CheckinAttempt(UUID.randomUUID(),
+                    sessionRepo.getReferenceById(sessionId), studentNo, deviceId,
+                    Strings.clip(ip, 64), Strings.clip(userAgent, 512), now, now);
+            blocked.setState(AttemptState.REJECTED);
+            blocked.setResultCode(code.name());
+            attemptRepo.save(blocked);
+
+            Attendance owner = code == ErrorCode.DEVICE_ALREADY_USED
+                    ? markDeviceShared(sessionId, deviceId) : null;
+            log.info("checkin blocked sessionId={} studentNo={} code={}", sessionId, studentNo, code);
+            liveEvents.attemptRejected(sessionId, studentNo, code.name(), deviceId,
+                    owner != null ? owner.getStudentNo() : null, now);
+        });
+        return new ApiException(code);
+    }
+
+    /**
+     * Flags the attendance that already owns this device: another student number was tried from the same
+     * phone. An undecided record becomes FLAGGED ("inceleme bekliyor"); a record the instructor already
+     * decided on keeps that decision and only gains the flag.
+     */
+    private Attendance markDeviceShared(long sessionId, String deviceId) {
+        Attendance owner = attendanceRepo
+                .findFirstBySession_IdAndDeviceIdOrderByCreatedAtAsc(sessionId, deviceId).orElse(null);
+        if (owner == null) return null;
+        if (!owner.getFlags().contains(Flag.DEVICE_SHARED)) {
+            Set<Flag> flags = owner.getFlags().isEmpty()
+                    ? EnumSet.noneOf(Flag.class) : EnumSet.copyOf(owner.getFlags());
+            flags.add(Flag.DEVICE_SHARED);
+            owner.setFlags(flags);
+            if (owner.getTeacherDecision() == TeacherDecision.NONE) owner.setStatus(AttendanceStatus.FLAGGED);
+            log.info("attendance flagged sessionId={} studentNo={} flag=DEVICE_SHARED",
+                    sessionId, owner.getStudentNo());
+            liveEvents.attendanceChanged(owner);
+        }
+        return owner;
     }
 
     @Transactional(noRollbackFor = ApiException.class)
@@ -378,8 +432,13 @@ public class CheckinService {
             if (a.getState() != AttemptState.SCANNING) return;
             a.setState(AttemptState.REJECTED);
             a.setResultCode(code.name());
+            Attendance owner = code == ErrorCode.DEVICE_ALREADY_USED
+                    ? markDeviceShared(a.getSessionId(), a.getDeviceId()) : null;
+            String conflict = owner != null && !owner.getStudentNo().equals(a.getStudentNo())
+                    ? owner.getStudentNo() : null;
             log.info("checkin rejected sessionId={} studentNo={} code={}", a.getSessionId(), a.getStudentNo(), code);
-            liveEvents.attemptRejected(a.getSessionId(), a.getStudentNo(), code.name(), Instant.now(clock));
+            liveEvents.attemptRejected(a.getSessionId(), a.getStudentNo(), code.name(), a.getDeviceId(),
+                    conflict, Instant.now(clock));
         });
     }
 

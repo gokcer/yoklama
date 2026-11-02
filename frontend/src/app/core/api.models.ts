@@ -35,11 +35,14 @@ export interface AttendanceDto {
   areaRatioMax?: number; areaThreshold?: number;
   geoState: string; geoDistanceM?: number; geoAccuracyM?: number;
   clockRttMs?: number; bleVerified: boolean; hasFrame: boolean;
-  userAgent?: string; cameraLabel?: string; teacherNote?: string;
+  userAgent?: string; cameraLabel?: string; deviceHint?: string; teacherNote?: string;
   createdAt: string; decidedAt?: string;
 }
 
-export interface AttemptDto { studentNo: string; resultCode: string; createdAt: string; }
+export interface AttemptDto {
+  studentNo: string; resultCode: string; deviceHint?: string;
+  conflictStudentNo?: string; createdAt: string;
+}
 export interface BulkAttendanceResult { added: number; skipped: number; errors: string[]; }
 
 export interface CalibrationRunDto { id: number; label: string; minLatencyMs: number; maxAreaRatio: number; validScanCount: number; createdAt: string; }
@@ -58,7 +61,9 @@ export interface BleVerifyResponse { verified: boolean; }
 export interface CompleteResponse { result: string; studentNo: string; studentName?: string; recordedAt: string; }
 
 export interface TeacherDto { id: number; username: string; displayName: string; role: string; enabled: boolean; }
-export interface AttemptRejectedEvent { studentNo: string; code: string; at: string; }
+export interface AttemptRejectedEvent {
+  studentNo: string; code: string; deviceHint?: string; conflictStudentNo?: string; at: string;
+}
 export interface SessionSseEvent { status: string; closesAt?: string; attendanceCount: number; flaggedPendingCount: number; }
 
 /* Exams (docs/11-EXAMS.md) */

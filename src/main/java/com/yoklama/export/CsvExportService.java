@@ -7,6 +7,7 @@ import com.yoklama.attendance.TeacherDecision;
 import com.yoklama.course.RosterEntry;
 import com.yoklama.course.RosterEntryRepository;
 import com.yoklama.decision.Flag;
+import com.yoklama.security.DeviceHint;
 import com.yoklama.session.ClassSession;
 import com.yoklama.session.SessionService;
 import org.springframework.stereotype.Service;
@@ -24,18 +25,21 @@ public class CsvExportService {
     public static final String SEP = ";";
     public static final String NL = "\r\n";
     static final String HEADER = String.join(SEP,
-            "ogrenciNo", "adSoyad", "durum", "katildi", "bayraklar", "gecikmeMs", "esikMs", "kaynak", "zaman", "not");
+            "ogrenciNo", "adSoyad", "durum", "katildi", "bayraklar", "gecikmeMs", "esikMs", "kaynak", "zaman", "not",
+            "cihazIpucu");
 
     private final AttendanceRepository attRepo;
     private final RosterEntryRepository rosterRepo;
     private final SessionService sessionService;
+    private final DeviceHint deviceHint;
     private final DateTimeFormatter timeFormat;
 
     public CsvExportService(AttendanceRepository attRepo, RosterEntryRepository rosterRepo,
-                            SessionService sessionService) {
+                            SessionService sessionService, DeviceHint deviceHint) {
         this.attRepo = attRepo;
         this.rosterRepo = rosterRepo;
         this.sessionService = sessionService;
+        this.deviceHint = deviceHint;
         this.timeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
     }
 
@@ -63,12 +67,13 @@ public class CsvExportService {
                     a.getLatencyThresholdMs() != null ? a.getLatencyThresholdMs().toString() : "",
                     a.getSource().name(),
                     timeFormat.format(a.getCreatedAt()),
-                    a.getTeacherNote());
+                    a.getTeacherNote(),
+                    deviceHint.of(a.getDeviceId()));
         }
         // Students on the roster who did not attend (04 §4.6: "Roster varsa").
         for (RosterEntry r : roster) {
             if (!checkedIn.contains(r.getStudentNo())) {
-                row(sb, r.getStudentNo(), r.getFullName(), "GELMEDI", "HAYIR", "", "", "", "", "", "");
+                row(sb, r.getStudentNo(), r.getFullName(), "GELMEDI", "HAYIR", "", "", "", "", "", "", "");
             }
         }
         return sb.toString();

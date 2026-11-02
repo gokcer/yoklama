@@ -11,10 +11,10 @@ public record AttendanceDto(long id, String studentNo, String fullName, String s
                             Double areaRatioMax, Double areaThreshold,
                             String geoState, Double geoDistanceM, Double geoAccuracyM,
                             Integer clockRttMs, boolean bleVerified, boolean hasFrame,
-                            String userAgent, String cameraLabel,
+                            String userAgent, String cameraLabel, String deviceHint,
                             String teacherNote, String createdAt, String decidedAt) {
 
-    public static AttendanceDto from(Attendance a) {
+    public static AttendanceDto from(Attendance a, String deviceHint) {
         return new AttendanceDto(a.getId(), a.getStudentNo(), a.getFullName(),
                 a.getSource().name(), a.getStatus().name(),
                 a.getFlags().stream().sorted().map(Flag::name).toList(),
@@ -23,7 +23,7 @@ public record AttendanceDto(long id, String studentNo, String fullName, String s
                 a.getAreaRatioMax(), a.getAreaThreshold(),
                 a.getGeoState().name(), a.getGeoDistanceM(), a.getGeoAccuracyM(),
                 a.getClockRttMs(), a.isBleVerified(), a.getFramePath() != null,
-                a.getUserAgent(), a.getCameraLabel(),
+                a.getUserAgent(), a.getCameraLabel(), deviceHint,
                 a.getTeacherNote(), a.getCreatedAt().toString(),
                 a.getDecidedAt() != null ? a.getDecidedAt().toString() : null);
     }
