@@ -8,7 +8,10 @@ target/
 .idea/
 *.iml
 *.iws
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
 .project
 .classpath
 .settings/

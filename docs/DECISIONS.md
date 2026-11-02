@@ -82,3 +82,4 @@ Biçim: `- [Faz N] karar — gerekçe`
 
 ## Ders düzenleme, geliştirme ortamı ve dağıtım (2026-11-02)
 - [Özellik] Ders kodu/adı ders detay sayfasından düzenlenir (`PUT /api/courses/{id}`); ders listesindeki "Düzenle" butonu kaldırıldı — düzenleme formu başlığın yerini alır, kaydedince başlık yenilenir
+- [DX] `.vscode/launch.json` + `tasks.json` + `settings.json` repoya alındı (`.gitignore` yalnız bunları istisna tutar) — JDK yolu `/usr/lib/jvm/java-21-openjdk-amd64` ve launch'taki `admin/admin123`, `docker-compose.yml`/`.env.example` ile aynı geliştirme varsayılanları; Windows/macOS'ta JDK yolu güncellenmeli

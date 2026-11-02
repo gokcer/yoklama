@@ -1,0 +1,66 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Backend: Spring Boot (dev, H2)",
+      "request": "launch",
+      "mainClass": "com.yoklama.YoklamaApplication",
+      "projectName": "yoklama",
+      "env": {
+        "APP_MASTER_SECRET": "dGVzdC1tYXN0ZXItc2VjcmV0LWtleS0zMi1ieXRlcyE=",
+        "APP_ADMIN_USERNAME": "admin",
+        "APP_ADMIN_PASSWORD": "admin123"
+      },
+      "vmArgs": "-Dspring.profiles.active=dev",
+      "preLaunchTask": "Backend: Build (skip frontend)"
+    },
+    {
+      "type": "java",
+      "name": "Backend: Spring Boot (PostgreSQL)",
+      "request": "launch",
+      "mainClass": "com.yoklama.YoklamaApplication",
+      "projectName": "yoklama",
+      "env": {
+        "SPRING_DATASOURCE_URL": "jdbc:postgresql://localhost:5432/yoklama",
+        "SPRING_DATASOURCE_USERNAME": "yoklama",
+        "SPRING_DATASOURCE_PASSWORD": "changeme",
+        "APP_MASTER_SECRET": "dGVzdC1tYXN0ZXItc2VjcmV0LWtleS0zMi1ieXRlcyE=",
+        "APP_ADMIN_USERNAME": "admin",
+        "APP_ADMIN_PASSWORD": "admin123"
+      },
+      "vmArgs": "-Dspring.profiles.active=dev",
+      "preLaunchTask": "Backend: Build (skip frontend)"
+    },
+    {
+      "type": "chrome",
+      "name": "Frontend: Chrome Debug",
+      "request": "launch",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMapPathOverrides": {
+        "webpack:/*": "${webRoot}/*"
+      },
+      "preLaunchTask": "Frontend: Serve (dev)"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (Backend H2 + Frontend)",
+      "configurations": [
+        "Backend: Spring Boot (dev, H2)",
+        "Frontend: Chrome Debug"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (Backend PG + Frontend)",
+      "configurations": [
+        "Backend: Spring Boot (PostgreSQL)",
+        "Frontend: Chrome Debug"
+      ],
+      "stopAll": true,
+      "preLaunchTask": "Docker: Postgres Only"
+    }
+  ]
+}

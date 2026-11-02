@@ -1,0 +1,94 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64"
+    }
+  },
+  "tasks": [
+    {
+      "label": "Backend: Build (skip frontend)",
+      "type": "shell",
+      "command": "./mvnw",
+      "args": [
+        "compile",
+        "-Pno-frontend",
+        "-DskipTests"
+      ],
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+    {
+      "label": "Backend: Full Build + Tests",
+      "type": "shell",
+      "command": "./mvnw",
+      "args": ["verify"],
+      "group": "build",
+      "problemMatcher": "$javac"
+    },
+    {
+      "label": "Frontend: npm install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: Serve (dev)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["start"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "angular",
+        "pattern": {
+          "regexp": "^✘ \\[ERROR\\] (.+)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Rebuilding\\.\\.\\.",
+          "endsPattern": "^.*Application bundle generation (complete|failed)"
+        }
+      }
+    },
+    {
+      "label": "Frontend: Test",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--", "--watch=false"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Compose Up",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "--build", "-d"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Compose Down",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Postgres Only",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "-d", "db"],
+      "problemMatcher": []
+    }
+  ]
+}
