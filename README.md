@@ -18,7 +18,7 @@ git clone <repo-url> && cd yoklama
 docker compose up --build
 ```
 
-That's it. Open **http://localhost:8080** and log in with `admin` / `admin123`.
+That's it. Open **http://localhost:8790** and log in with `admin` / `admin123`.
 
 To customise settings (database password, admin credentials, etc.):
 
