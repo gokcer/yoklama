@@ -71,3 +71,4 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [İnceleme] Oturum oluşturma: varsayılan başlık bugünün tarihi; derslik desteklemiyorsa Konum/BLE seçenekleri devre dışı ve OFF'a düşer (sunucu hatası yerine); "Oluştur ve başlat" kısayolu
 - [İnceleme] Admin "Yeni kullanıcı" önceki düzenleme durumunu sıfırlar — önceden düzenlenen kullanıcıyı güncelliyordu
 - [DX] Dockerfile multi-stage build'e çevrildi — checkout eden `docker compose up --build` ile JDK/Node kurmadan başlayabilsin; deploy/ compose'u da aynı Dockerfile'ı kullanıyor
+- [Özellik] Dönen QR içeriği düz token yerine URL: `{baseUrl}/q/{token}` — genel telefon kamerası ile tarandığında site açılır; QR sürüm 2→4 (25×25→33×33) olur, hâlâ rahatça taranır. Base URL istemcinin gelen isteğindeki `X-Forwarded-*` başlıklarından türetilir (hardcoded `APP_PUBLIC_BASE_URL` yedeği korunur); böylece ters proxy arkasında (yoklama.armikom.com) veya localhost'ta doğru URL üretilir

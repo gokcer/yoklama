@@ -7,6 +7,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.List;
 
@@ -112,9 +113,11 @@ public class SessionController {
 
     @GetMapping("/{id}/display-config")
     public ResponseEntity<SessionService.DisplayConfig> displayConfig(@PathVariable long id) {
+        String requestBase = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        String baseUrl = service.resolveBaseUrl(requestBase);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(service.displayConfig(id));
+                .body(service.displayConfig(id, baseUrl));
     }
 
     @GetMapping("/{id}/calibration-runs")
@@ -145,7 +148,13 @@ public class SessionController {
                 service.flaggedPendingCount(s.getId()));
     }
 
+    private String requestBaseUrl() {
+        String requestBase = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        return service.resolveBaseUrl(requestBase);
+    }
+
     private SessionDetailDto toDetail(ClassSession s) {
+        String baseUrl = requestBaseUrl();
         return new SessionDetailDto(s.getId(),
                 s.getCourse().getCode(), s.getCourse().getName(), s.getCourse().getId(),
                 s.getClassroom() != null ? s.getClassroom().getId() : null,
@@ -164,7 +173,7 @@ public class SessionController {
                 service.effectiveLatencyThreshold(s),
                 service.effectiveAreaThreshold(s),
                 service.thresholdSource(s),
-                s.getStatus() != SessionStatus.DRAFT ? service.joinUrl(s) : null,
+                s.getStatus() != SessionStatus.DRAFT ? service.joinUrl(s, baseUrl) : null,
                 service.attendanceCount(s.getId()),
                 service.flaggedPendingCount(s.getId()),
                 s.getCreatedAt().toString());

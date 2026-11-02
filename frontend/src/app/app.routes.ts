@@ -5,6 +5,7 @@ import { authGuard, adminGuard } from './core/auth.guard';
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'c/:code', loadComponent: () => import('./student/checkin-flow.component').then(m => m.CheckinFlowComponent) },
+  { path: 'q/:token', loadComponent: () => import('./shared/qr-redirect.component').then(m => m.QrRedirectComponent) },
   { path: 't/login', loadComponent: () => import('./teacher/login.component').then(m => m.LoginComponent) },
   // Projection view: full screen, no teacher shell/menu (06 §3).
   {

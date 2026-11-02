@@ -136,7 +136,7 @@ export class ScannerEngine {
     }
 
     this.opts.onNewToken({
-      token: result.text,
+      token: parsed.raw,   // QR text may be a /q/ URL; the server expects the bare token
       seq: parsed.seq,
       firstSeenServerMs: result.frameServerMs,
       frameTimeSource: result.source,

@@ -89,6 +89,8 @@ public class SecurityConfig {
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(deviceCookieFilter, RateLimitFilter.class)
             .headers(h -> {
+                // Cache-Control is owned by SpaWebConfig's filter (immutable bundles, no-cache shell, no-store API).
+                h.cacheControl(cc -> cc.disable());
                 h.contentSecurityPolicy(csp -> csp.policyDirectives(CSP));
                 h.referrerPolicy(rp -> rp.policy(ReferrerPolicy.SAME_ORIGIN));
                 h.addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",

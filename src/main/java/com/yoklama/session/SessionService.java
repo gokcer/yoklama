@@ -252,10 +252,10 @@ public class SessionService {
     }
 
     public record DisplayConfig(long sessionId, String code, String sessionKeyB64, long epochStartMs,
-                                int refreshMs, String closesAt, String joinUrl,
+                                int refreshMs, String closesAt, String joinUrl, String qrBaseUrl,
                                 String courseCode, String title) {}
 
-    public DisplayConfig displayConfig(long id) {
+    public DisplayConfig displayConfig(long id, String baseUrl) {
         ClassSession s = get(id);
         if (s.getStatus() != SessionStatus.OPEN) throw new ApiException(ErrorCode.SESSION_NOT_OPEN);
         byte[] key = sessionKey(s);
@@ -263,14 +263,31 @@ public class SessionService {
                 Base64.getEncoder().encodeToString(key),
                 s.getEpochStartMs(), s.getRefreshMs(),
                 s.getClosesAt().toString(),
-                joinUrl(s),
+                joinUrl(s, baseUrl),
+                qrBaseUrl(s, baseUrl),
                 s.getCourse().getCode(), s.getTitle());
     }
 
-    public String joinUrl(ClassSession s) {
-        String base = props.publicBaseUrl();
-        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+    public String joinUrl(ClassSession s, String baseUrl) {
+        String base = stripTrailingSlash(baseUrl);
         return base + "/c/" + s.getCode();
+    }
+
+    /** Base URL for the rotating QR: <code>{baseUrl}/q/</code> — the display appends each token. */
+    public String qrBaseUrl(ClassSession s, String baseUrl) {
+        String base = stripTrailingSlash(baseUrl);
+        return base + "/q/";
+    }
+
+    /** Resolves the base URL: prefers the provided request-derived URL, falls back to config. */
+    public String resolveBaseUrl(String requestBaseUrl) {
+        if (requestBaseUrl != null && !requestBaseUrl.isBlank()) return stripTrailingSlash(requestBaseUrl);
+        String configured = props.publicBaseUrl();
+        return configured != null ? stripTrailingSlash(configured) : "http://localhost:8080";
+    }
+
+    private static String stripTrailingSlash(String url) {
+        return url != null && url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
     public int effectiveLatencyThreshold(ClassSession s) {

@@ -42,6 +42,12 @@ describe('ScannerEngine', () => {
     expect(engine.distinct()).toBe(2);
   });
 
+  it('emits the bare token when the QR holds a /q/ URL', () => {
+    engine.handleResult(result('https://yoklama.armikom.com/q/' + T1));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ token: T1, seq: 7 });
+  });
+
   it('ignores tokens of another session and shows a hint', () => {
     engine.handleResult(result(OTHER));
     expect(events).toHaveLength(0);

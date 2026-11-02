@@ -53,6 +53,21 @@ describe('parseToken', () => {
   it('null/garbage', () => {
     expect(parseToken('NOT_A_TOKEN')).toBeNull();
   });
+
+  it('extracts token from URL with /q/ path', () => {
+    const t = parseToken('https://yoklama.armikom.com/q/Y1.ABC234.7.MGJ6K3CW.77B7SI2E54AA2');
+    expect(t).not.toBeNull();
+    expect(t!.code).toBe('ABC234');
+    expect(t!.seq).toBe(7);
+    expect(t!.raw).toBe('Y1.ABC234.7.MGJ6K3CW.77B7SI2E54AA2');
+  });
+
+  it('extracts token from HTTP URL with /q/ path', () => {
+    const t = parseToken('http://localhost:8080/q/Y1.K7Q2ZP.ZZ.MGJ6K4IK.NNSGYSRVIIHIU');
+    expect(t).not.toBeNull();
+    expect(t!.code).toBe('K7Q2ZP');
+    expect(t!.seq).toBe(1295);
+  });
 });
 
 describe('signToken', () => {

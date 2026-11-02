@@ -51,7 +51,9 @@ token  = prefix + "." + sig
 - `seq`: slot numarası, `0 ≤ seq ≤ 1 679 615` (base36'da en fazla 4 karakter).
 - `ts`: slotun **planlı** gösterim anı, Unix epoch milisaniye: `ts = epochStartMs + seq * refreshMs`.
 - Regex: `^Y1\.([A-HJ-NP-Z2-9]{6})\.([0-9A-Z]{1,4})\.([0-9A-Z]{1,9})\.([A-Z2-7]{13})$`
-- En fazla 37 karakter; yalnızca QR alfanümerik mod karakterleri → **QR sürüm 2, ECC M, 25×25 modül** (doğrulandı). QR üretilirken ECC yükseltme (boost) kapalı olmalı, mod otomatik/alfanümerik.
+- En fazla 37 karakter; yalnızca QR alfanümerik mod karakterleri.
+- **QR içeriği:** Display bileşeni token'ı tek başına değil, URL olarak kodlar: `{qrBaseUrl}{token}` (ör. `https://yoklama.armikom.com/q/Y1.ABC234.7.MGJ6K3CW.77B7SI2E54AA2`). Böylece genel bir telefon kamerası ile tarandığında site açılır. `qrBaseUrl` sunucudan `display-config` ile gelir ve gelen isteğin base URL'inden türetilir. URL eklendiğinde QR boyutu **sürüm 4, ECC M, 33×33 modül** olur; hâlâ rahatça taranabilir.
+- Uygulama içi tarayıcı, QR içeriğindeki `/q/` yolunu ayrıştırarak ham token'ı çıkarır; hem düz token hem URL desteklenir.
 - İmza karşılaştırması **sabit zamanlı** (`MessageDigest.isEqual`) yapılır.
 
 ### 3.2 Test vektörleri

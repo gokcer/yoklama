@@ -24,7 +24,8 @@ export interface SessionDto {
 
 export interface DisplayConfigDto {
   sessionId: number; code: string; sessionKeyB64: string; epochStartMs: number;
-  refreshMs: number; closesAt: string; joinUrl: string; courseCode: string; title: string;
+  refreshMs: number; closesAt: string; joinUrl: string; qrBaseUrl: string;
+  courseCode: string; title: string;
 }
 
 export interface AttendanceDto {

@@ -32,7 +32,16 @@ export async function signToken(key: CryptoKey, code: string, seq: number, ts: n
 
 export interface ParsedToken { code: string; seq: number; ts: number; raw: string; }
 
+/** Extracts the raw token from a QR value that may be a bare token or a URL containing one. */
+function extractToken(raw: string): string {
+  // If it's a URL like https://host/q/Y1.ABC234.7.… extract the token part after /q/
+  const qIdx = raw.indexOf('/q/');
+  if (qIdx >= 0) return raw.substring(qIdx + 3);
+  return raw;
+}
+
 export function parseToken(raw: string): ParsedToken | null {
-  const m = TOKEN_RE.exec(raw);
-  return m ? { code: m[1], seq: parseInt(m[2], 36), ts: parseInt(m[3], 36), raw } : null;
+  const token = extractToken(raw);
+  const m = TOKEN_RE.exec(token);
+  return m ? { code: m[1], seq: parseInt(m[2], 36), ts: parseInt(m[3], 36), raw: token } : null;
 }

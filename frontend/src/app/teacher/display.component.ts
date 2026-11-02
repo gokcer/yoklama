@@ -2,6 +2,7 @@ import { Component, inject, input, signal, effect, OnInit, OnDestroy, ElementRef
 import { ApiService } from '../core/api.service';
 import { ClockSyncService } from '../core/clock-sync.service';
 import { SseService, type SseSubscription } from '../core/sse.service';
+import { VersionService } from '../core/version.service';
 import { importHmacKey, signToken } from '../core/token-codec';
 import { slotAt, formatRemaining } from '../core/slot';
 import { errorMessage } from '../shared/errors';
@@ -68,6 +69,7 @@ export class DisplayComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly clock = inject(ClockSyncService);
   private readonly sse = inject(SseService);
+  private readonly version = inject(VersionService);
   readonly id = input.required<string>();
   readonly qrCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('qrCanvas');
   readonly joinQr = viewChild<ElementRef<HTMLCanvasElement>>('joinQr');
@@ -91,6 +93,7 @@ export class DisplayComponent implements OnInit, OnDestroy {
   private closesAtMs = 0;
   private epochStartMs = 0;
   private refreshMs = 1000;
+  private qrBaseUrl = '';
   private animId = 0;
   private destroyed = false;
   private sseSub: SseSubscription | null = null;
@@ -99,6 +102,11 @@ export class DisplayComponent implements OnInit, OnDestroy {
 
   constructor() {
     // The join QR canvas only exists once the config has rendered; draw it whenever both are there.
+    // The projector tab stays open for the whole lesson: reload it as soon as a new deployment is out
+    // so it never keeps showing QR codes from old code. The session resumes from display-config.
+    effect(() => {
+      if (this.version.updateAvailable()) location.reload();
+    });
     effect(() => {
       const el = this.joinQr()?.nativeElement;
       const c = this.cfg();
@@ -117,6 +125,7 @@ export class DisplayComponent implements OnInit, OnDestroy {
       this.epochStartMs = config.epochStartMs;
       this.refreshMs = config.refreshMs;
       this.closesAtMs = new Date(config.closesAt).getTime();
+      this.qrBaseUrl = config.qrBaseUrl ?? '';
       const raw = Uint8Array.from(atob(config.sessionKeyB64), c => c.charCodeAt(0));
       this.key = await importHmacKey(raw);
       await this.resync();
@@ -184,7 +193,9 @@ export class DisplayComponent implements OnInit, OnDestroy {
     try {
       const ts = this.epochStartMs + seq * this.refreshMs;
       const token = await signToken(this.key, this.cfg()!.code, seq, ts);
-      const qr = QRCode.create(token, { errorCorrectionLevel: 'M' });
+      // Encode the QR content as a URL so generic phone cameras also open the site.
+      const qrContent = this.qrBaseUrl ? this.qrBaseUrl + token : token;
+      const qr = QRCode.create(qrContent, { errorCorrectionLevel: 'M' });
       const size = qr.modules.size;
       const modules: boolean[][] = [];
       for (let r = 0; r < size; r++) {

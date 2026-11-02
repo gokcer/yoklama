@@ -28,6 +28,9 @@ public class SpaWebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/")
+                // Jar entries all carry the same 1980 timestamp, so Last-Modified would answer 304 with the
+                // previous deployment's index.html; hashed bundles don't need it either.
+                .setUseLastModified(false)
                 .resourceChain(true)
                 .addResolver(new PathResourceResolver() {
                     @Override
@@ -38,6 +41,10 @@ public class SpaWebConfig implements WebMvcConfigurer {
                         Resource requested = location.createRelative(path);
                         if (requested.exists() && requested.isReadable()) {
                             return requested;
+                        }
+                        // /q/<token> paths contain dots but are SPA deep links (QR URLs).
+                        if (path.startsWith("q/")) {
+                            return location.createRelative("index.html");
                         }
                         // Missing files (e.g. a stale chunk after a deploy) are 404s, not the SPA shell.
                         String lastSegment = path.substring(path.lastIndexOf('/') + 1);
@@ -52,6 +59,7 @@ public class SpaWebConfig implements WebMvcConfigurer {
     /**
      * Hashed bundles are immutable (1 year); everything else outside the API (index.html and SPA deep
      * links, which resolve to index.html) must be revalidated so a new deployment is picked up.
+     * API responses are never stored unless a controller sets its own Cache-Control.
      */
     @Bean
     public FilterRegistrationBean<OncePerRequestFilter> staticCacheHeadersFilter() {
@@ -59,14 +67,16 @@ public class SpaWebConfig implements WebMvcConfigurer {
             @Override
             protected boolean shouldNotFilter(HttpServletRequest request) {
                 String uri = request.getRequestURI();
-                return !"GET".equals(request.getMethod())
-                        || uri.startsWith("/api/") || uri.startsWith("/actuator/");
+                return uri.startsWith("/actuator/");
             }
 
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                             FilterChain chain) throws ServletException, IOException {
-                if (HASHED_ASSET.matcher(request.getRequestURI()).matches()) {
+                String uri = request.getRequestURI();
+                if (uri.startsWith("/api/") || !"GET".equals(request.getMethod())) {
+                    response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+                } else if (HASHED_ASSET.matcher(uri).matches()) {
                     response.setHeader(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable");
                 } else {
                     response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
