@@ -79,3 +79,6 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [Özellik] Engellenen check-in'ler iz bırakır: `ALREADY_CHECKED_IN` / `DEVICE_ALREADY_USED` reddinde deneme `REJECTED` + `resultCode` ile kaydedilir; engelleyen istek exception ile rollback olduğu için kanıt `PROPAGATION_REQUIRES_NEW` transaction'da yazılır
 - [Özellik] `attempt-rejected` SSE olayı ve `GET /api/sessions/{id}/attempts` yanıtı `deviceHint` + `conflictStudentNo` taşır; dashboard "Reddedilen denemeler" tablosunda cihaz ipucu ve cihazın sahibi olan numara gösterilir, kayıt detayında cihaz ipucu görünür
 - [Özellik] CSV'ye son sütun olarak `cihazIpucu` eklendi (11 sütun); bayrak/gecikme/eşik değerleri öğrenciye hâlâ gönderilmiyor
+
+## Ders düzenleme, geliştirme ortamı ve dağıtım (2026-11-02)
+- [Özellik] Ders kodu/adı ders detay sayfasından düzenlenir (`PUT /api/courses/{id}`); ders listesindeki "Düzenle" butonu kaldırıldı — düzenleme formu başlığın yerini alır, kaydedince başlık yenilenir

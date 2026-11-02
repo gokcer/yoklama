@@ -62,7 +62,6 @@ import type { CourseDto, SessionDto } from '../core/api.models';
             <strong>{{ c.code }}</strong> — {{ c.name }}
           </a>
           <span class="badge badge-info">{{ c.rosterCount }} {{ msg.courses.students }}</span>
-          <button class="btn btn-outline btn-sm" (click)="edit(c)">Düzenle</button>
         </div>
       }
     </div>

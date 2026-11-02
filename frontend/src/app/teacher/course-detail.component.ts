@@ -13,12 +13,26 @@ import type { CourseDto, ExamSummaryDto, RosterEntryDto, RosterImportResult, Ses
     <div class="container">
       <nav class="breadcrumb" aria-label="Konum"><a routerLink="/t">{{ msg.nav.courses }}</a> › {{ course()?.code }}</nav>
       <div class="page-header">
-        <h1>{{ course() ? course()!.code + ' — ' + course()!.name : msg.courses.title }}</h1>
-        <div class="flex-gap">
-          <a class="btn btn-primary" [routerLink]="['/t/sessions/new']" [queryParams]="{ courseId: id() }">{{ msg.sessions.create }}</a>
-          <button class="btn btn-outline text-danger" (click)="deleteCourse()" [disabled]="sessions().length > 0 || exams().length > 0"
-            [title]="sessions().length > 0 ? 'Oturumu olan ders silinemez' : exams().length > 0 ? 'Sınavı olan ders silinemez' : 'Dersi sil'">Sil</button>
-        </div>
+        @if (!editing()) {
+          <h1>{{ course() ? course()!.code + ' — ' + course()!.name : msg.courses.title }}</h1>
+          <div class="flex-gap">
+            <button class="btn btn-outline btn-sm" (click)="startEdit()">Düzenle</button>
+            <a class="btn btn-primary" [routerLink]="['/t/sessions/new']" [queryParams]="{ courseId: id() }">{{ msg.sessions.create }}</a>
+            <button class="btn btn-outline text-danger" (click)="deleteCourse()" [disabled]="sessions().length > 0 || exams().length > 0"
+              [title]="sessions().length > 0 ? 'Oturumu olan ders silinemez' : exams().length > 0 ? 'Sınavı olan ders silinemez' : 'Dersi sil'">Sil</button>
+          </div>
+        } @else {
+          <form class="edit-course-form" (ngSubmit)="saveEdit()">
+            <div class="flex-gap" style="flex:1;flex-wrap:wrap">
+              <input class="form-input" [(ngModel)]="editCode" name="code" required maxlength="32" placeholder="Ders kodu" style="width:140px" />
+              <input class="form-input" [(ngModel)]="editName" name="name" required maxlength="200" placeholder="Ders adı" style="flex:1;min-width:180px" />
+            </div>
+            <div class="flex-gap">
+              <button class="btn btn-primary btn-sm" type="submit" [disabled]="!editCode.trim() || !editName.trim()">Kaydet</button>
+              <button class="btn btn-outline btn-sm" type="button" (click)="cancelEdit()">İptal</button>
+            </div>
+          </form>
+        }
       </div>
       @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
 
@@ -132,6 +146,7 @@ import type { CourseDto, ExamSummaryDto, RosterEntryDto, RosterImportResult, Ses
     .roster-table { overflow: auto; max-height: 480px; border: 1px solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface); }
     .roster-table thead th { position: sticky; top: 0; background: var(--c-surface); }
     .import-errors { margin: 8px 0 0; padding-left: 20px; max-height: 200px; overflow: auto; }
+    .edit-course-form { display: flex; gap: var(--space-sm); flex: 1; align-items: center; flex-wrap: wrap; }
   `],
 })
 export class CourseDetailComponent implements OnInit {
@@ -151,6 +166,9 @@ export class CourseDetailComponent implements OnInit {
     if (!q) return this.roster();
     return this.roster().filter(r => r.studentNo.includes(q) || r.fullName.toLocaleLowerCase('tr-TR').includes(q));
   });
+  readonly editing = signal(false);
+  editCode = '';
+  editName = '';
   importMode = 'REPLACE';
   newStudentNo = '';
   newFullName = '';
@@ -202,6 +220,26 @@ export class CourseDetailComponent implements OnInit {
     return this.run(async () => {
       await this.api.deleteRosterEntry(+this.id(), r.studentNo);
       this.roster.set(await this.api.getRoster(+this.id()));
+    });
+  }
+
+  startEdit() {
+    const c = this.course();
+    if (!c) return;
+    this.editCode = c.code;
+    this.editName = c.name;
+    this.editing.set(true);
+  }
+
+  cancelEdit() {
+    this.editing.set(false);
+  }
+
+  saveEdit() {
+    return this.run(async () => {
+      await this.api.updateCourse(+this.id(), { code: this.editCode.trim(), name: this.editName.trim() });
+      this.editing.set(false);
+      await this.load();
     });
   }
 
