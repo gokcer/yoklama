@@ -288,12 +288,12 @@ export type BubbleMark = 'correct' | 'wrong' | 'key' | null;
 
 /**
  * Right/wrong marking of one bubble against the answer key (null without a key).
- * The key bubble is outlined only once the question was entered, so untouched rows give no hints.
+ * The key bubble is always outlined, also before the question is entered, so the key stays visible.
  */
 export function bubbleMark(q: QuestionDto, cell: Cell, letter: string): BubbleMark {
   const key = q.correctChoice?.toUpperCase();
-  if (q.type !== 'CHOICE' || !key || !cell.entered) return null;
-  if (cell.answer === letter) return letter === key ? 'correct' : 'wrong';
+  if (q.type !== 'CHOICE' || !key) return null;
+  if (cell.entered && cell.answer === letter) return letter === key ? 'correct' : 'wrong';
   return letter === key ? 'key' : null;
 }
 

@@ -300,7 +300,10 @@ describe('result summary and marks', () => {
     expect(bubbleMark(qs[1], cell, 'B')).toBe('key');
     expect(bubbleMark(qs[1], cell, 'A')).toBeNull();
     expect(bubbleMark(qs[3], cell, 'C')).toBeNull();
-    expect(bubbleMark(qs[0], { ...cell, entered: false, answer: null }, 'A')).toBeNull();
+    const blank = { ...cell, entered: false, answer: null };
+    expect(bubbleMark(qs[1], blank, 'B')).toBe('key');
+    expect(bubbleMark(qs[1], blank, 'A')).toBeNull();
+    expect(bubbleMark(qs[3], blank, 'C')).toBeNull();
   });
 
   it('groups consecutive question kinds', () => {
