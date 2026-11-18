@@ -286,13 +286,42 @@ export function summarize(questions: readonly QuestionDto[], examTotal: number, 
 
 export type BubbleMark = 'correct' | 'wrong' | 'key' | null;
 
-/** Right/wrong marking of one bubble against the answer key (null without a key). */
+/**
+ * Right/wrong marking of one bubble against the answer key (null without a key).
+ * The key bubble is outlined only once the question was entered, so untouched rows give no hints.
+ */
 export function bubbleMark(q: QuestionDto, cell: Cell, letter: string): BubbleMark {
   const key = q.correctChoice?.toUpperCase();
-  if (q.type !== 'CHOICE' || !key) return null;
-  const selected = cell.entered && cell.answer === letter;
-  if (selected) return letter === key ? 'correct' : 'wrong';
+  if (q.type !== 'CHOICE' || !key || !cell.entered) return null;
+  if (cell.answer === letter) return letter === key ? 'correct' : 'wrong';
   return letter === key ? 'key' : null;
+}
+
+/** Row state of an entered CHOICE question against the key: blank counts as wrong; null without key or entry. */
+export function rowMark(q: QuestionDto, cell: Cell): 'correct' | 'wrong' | null {
+  const key = q.correctChoice?.toUpperCase();
+  if (q.type !== 'CHOICE' || !key || !cell.entered) return null;
+  return cell.answer === key ? 'correct' : 'wrong';
+}
+
+/**
+ * Live summary of the sheet as currently entered, scored like the server (ExamMath.choicePoints):
+ * correct → maxPoints, wrong/blank → 0, no key → pending. Invalid points fields count as ungraded.
+ */
+export function sheetSummary(questions: readonly QuestionDto[], examTotal: number, sheet: Sheet): ResultSummary {
+  const req = buildRequest(questions, sheet);
+  let total = 0;
+  const answers = req.answers.map((a, i): ExamAnswerDto => {
+    const q = questions[i];
+    let points = a.points;
+    if (q.type === 'CHOICE') {
+      const key = q.correctChoice?.toUpperCase();
+      points = key ? (a.answer === key ? q.maxPoints : 0) : null;
+    }
+    if (points != null) total += points;
+    return { ...a, points };
+  });
+  return summarize(questions, examTotal, { totalPoints: total, answers } as ExamResultDto);
 }
 
 /* ---------- question layout ---------- */

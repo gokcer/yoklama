@@ -8,7 +8,7 @@ import { errorMessage } from '../shared/errors';
 import type { ExamDto, ExamResultDto, QuestionDto, RosterEntryDto } from '../core/api.models';
 import {
   STATUS_LABEL, type Cell, type ResultSummary, type Sheet, type StudentRow,
-  bubbleMark, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
+  bubbleMark, rowMark, sheetSummary, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
   invalidQuestions, lettersFor, nextStudent, pointsError, progress, reduceKey, setActive, sheetFromResult,
   entryFeedback, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
 } from './exam-entry.logic';
@@ -98,8 +98,8 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                 </div>
               </div>
 
-              @if (shownResult(); as s) {
-                <div class="result card" role="status">
+              @if (liveSummary(); as s) {
+                <div class="result card" role="status" [class.unsaved]="dirty()">
                   <div class="result-score">
                     <span class="big">{{ num(s.total) }}</span><span class="text-secondary"> / {{ num(s.max) }}</span>
                     @if (s.percent !== null) { <span class="pct">{{ pct(s.percent) }}</span> }
@@ -117,6 +117,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                     <p class="text-sm note">{{ s.pendingKey }} seçenekli sorunun cevap anahtarı yok; bu soruların puanı anahtar girilince hesaplanacak.</p>
                   }
                   @if (s.ungraded > 0) { <p class="text-sm note">{{ s.ungraded }} açık uçlu/serbest soru puanlanmadı.</p> }
+                  @if (shownResult()) {
                   <div class="result-actions">
                     @if (nextRow(); as n) {
                       <button #nextBtn type="button" class="btn btn-primary" (click)="selectStudent(n.studentNo)">
@@ -126,6 +127,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                       <span class="text-sm text-secondary">Sonucu girilmemiş başka liste öğrencisi kalmadı.</span>
                     }
                   </div>
+                  }
                 </div>
               }
 
@@ -155,10 +157,11 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                         @let q = questions()[i];
                         @let c = sheet().cells[i];
                         <div class="qrow" [id]="'q-' + i" [class.active]="i === sheet().active" [class.done]="c.entered"
-                          [class.cue]="cue() === i" [attr.title]="questionTitle(q)" (click)="activate(i)">
+                          [class.cue]="cue() === i" [class.row-wrong]="rmark(q, c) === 'wrong'"
+                          [attr.title]="questionTitle(q)" (click)="activate(i)">
                           <span class="qno">{{ q.position }}</span>
                           @for (L of letters(q); track L) {
-                            @let m = marks() ? mark(q, c, L) : null;
+                            @let m = mark(q, c, L);
                             <button type="button" class="bubble" tabindex="-1"
                               [class.on]="c.entered && c.answer === L" [class.correct]="m === 'correct'" [class.wrong]="m === 'wrong'" [class.key]="m === 'key'"
                               [attr.aria-label]="'Soru ' + q.position + ' ' + L" [attr.aria-pressed]="c.entered && c.answer === L"
@@ -241,6 +244,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
     .who { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; min-width: 0; }
     .prog { display: flex; gap: var(--space-sm); align-items: center; }
 
+    .result.unsaved { border-style: dashed; }
     .result { margin-top: var(--space-sm); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); padding: var(--space-md); }
     .result-score .big { font-size: 1.75rem; font-weight: 700; }
     .result-score .pct { margin-left: var(--space-sm); font-weight: 600; color: var(--c-primary); }
@@ -265,6 +269,9 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
     .qrow { display: flex; align-items: center; gap: 3px; padding: 2px 6px; margin-bottom: 2px; border: 1px solid transparent;
       border-radius: 999px; break-inside: avoid; cursor: pointer; }
     .qrow.active { background: var(--c-primary-light); border-color: var(--c-primary); }
+    .qrow.row-wrong { background: var(--c-danger-light); }
+    .qrow.row-wrong .qno { color: var(--c-danger); }
+    .qrow.row-wrong.active { border-color: var(--c-danger); }
     .qno { min-width: 2em; margin-right: 4px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums;
       font-size: 0.8rem; color: var(--c-text-secondary); }
     .qrow.done .qno { color: var(--c-text); }
@@ -350,8 +357,12 @@ export class ExamEntryComponent implements OnInit {
   readonly prog = computed(() => progress(this.questions(), this.sheet()));
   readonly activeQuestion = computed(() => this.questions()[this.sheet().active] ?? null);
   readonly dirty = computed(() => this.current() !== null && sheetSignature(this.questions(), this.sheet()) !== this.baseline());
-  /** Right/wrong marks only on a saved, unchanged result (no key hints while typing). */
-  readonly marks = computed(() => !!this.currentRow()?.result && !this.dirty());
+  /** Live score of the sheet as entered (saved or not); shown once anything is entered or a result exists. */
+  readonly liveSummary = computed(() => {
+    const row = this.currentRow();
+    if (!row || (!row.result && this.prog().entered === 0)) return null;
+    return sheetSummary(this.questions(), this.exam()?.totalPoints ?? 0, this.sheet());
+  });
   readonly shownResult = computed(() => {
     const s = this.saved();
     return s && s.studentNo === this.current() && !this.dirty() ? s.summary : null;
@@ -393,6 +404,7 @@ export class ExamEntryComponent implements OnInit {
   pct(n: number) { return PCT.format(n); }
   letters(q: QuestionDto) { return lettersFor(q); }
   mark(q: QuestionDto, c: Cell, letter: string) { return bubbleMark(q, c, letter); }
+  rmark(q: QuestionDto, c: Cell) { return rowMark(q, c); }
   pointsErr(q: QuestionDto, c: Cell) { return pointsError(q, c.points); }
   typeLabel(q: QuestionDto) { return TYPE_LABEL[q.type] ?? q.type; }
   status(r: StudentRow) { return studentStatus(r); }

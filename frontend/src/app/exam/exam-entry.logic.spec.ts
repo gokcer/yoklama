@@ -3,7 +3,7 @@ import type { ExamResultDto, QuestionDto } from '../core/api.models';
 import {
   buildRequest, buildStudentList, bubbleMark, clickBubble, emptyCell, emptySheet, entryFeedback, filterStudents, foldTr, formatPoints,
   groupRuns, invalidQuestions, keyLetter, lettersFor, nextStudent, parsePoints, pointsError, progress, reduceKey,
-  sheetFromResult, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
+  rowMark, sheetFromResult, sheetSignature, sheetSummary, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
   type KeyOutcome, type Sheet,
 } from './exam-entry.logic';
 
@@ -300,7 +300,7 @@ describe('result summary and marks', () => {
     expect(bubbleMark(qs[1], cell, 'B')).toBe('key');
     expect(bubbleMark(qs[1], cell, 'A')).toBeNull();
     expect(bubbleMark(qs[3], cell, 'C')).toBeNull();
-    expect(bubbleMark(qs[0], { ...cell, entered: false, answer: null }, 'A')).toBe('key');
+    expect(bubbleMark(qs[0], { ...cell, entered: false, answer: null }, 'A')).toBeNull();
   });
 
   it('groups consecutive question kinds', () => {
@@ -390,5 +390,35 @@ describe('entryFeedback', () => {
   });
   it('announces again when the answer changes', () => {
     expect(entryFeedback(q('A'), cell(true, 'B'), cell(true, 'A'))).toBe('ok');
+  });
+});
+
+describe('live marking', () => {
+  const qs = [
+    { id: 1, position: 1, type: 'CHOICE', text: null, topic: null, maxPoints: 5, choiceCount: 4, correctChoice: 'B' },
+    { id: 2, position: 2, type: 'CHOICE', text: null, topic: null, maxPoints: 5, choiceCount: 4, correctChoice: 'C' },
+    { id: 3, position: 3, type: 'CHOICE', text: null, topic: null, maxPoints: 5, choiceCount: 4, correctChoice: null },
+    { id: 4, position: 4, type: 'FREE', text: null, topic: null, maxPoints: 10, choiceCount: null, correctChoice: null },
+  ] as QuestionDto[];
+  const c = (entered: boolean, answer: string | null, points = '') => ({ ...emptyCell(), entered, answer, points });
+
+  it('marks entered rows only, blank as wrong', () => {
+    expect(rowMark(qs[0], c(true, 'B'))).toBe('correct');
+    expect(rowMark(qs[0], c(true, 'A'))).toBe('wrong');
+    expect(rowMark(qs[0], c(true, null))).toBe('wrong');
+    expect(rowMark(qs[0], c(false, null))).toBeNull();
+    expect(rowMark(qs[2], c(true, 'A'))).toBeNull();
+    expect(rowMark(qs[3], c(false, null, '3'))).toBeNull();
+  });
+
+  it('summarizes the sheet like the server scores it', () => {
+    const sheet: Sheet = { active: 0, cells: [c(true, 'B'), c(true, 'A'), c(true, 'D'), c(false, null, '7,5')] };
+    const s = sheetSummary(qs, 25, sheet);
+    expect(s.total).toBe(12.5);
+    expect(s.correct).toBe(1);
+    expect(s.wrong).toBe(1);
+    expect(s.pendingKey).toBe(1);
+    expect(s.ungraded).toBe(0);
+    expect(s.percent).toBe(0.5);
   });
 });
