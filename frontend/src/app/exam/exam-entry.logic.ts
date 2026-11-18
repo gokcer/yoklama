@@ -453,3 +453,8 @@ export function searchKey(key: string, hl: number, rows: readonly StudentRow[], 
     default: return null;
   }
 }
+
+/** Display order for entry: students without a result first, then those with one; number order within each group. */
+export function entryOrder(rows: readonly StudentRow[]): StudentRow[] {
+  return [...rows.filter(r => !r.result), ...rows.filter(r => r.result)];
+}

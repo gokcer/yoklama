@@ -8,7 +8,7 @@ import { errorMessage } from '../shared/errors';
 import type { ExamDto, ExamResultDto, QuestionDto, RosterEntryDto } from '../core/api.models';
 import {
   STATUS_LABEL, type Cell, type ResultSummary, type Sheet, type StudentRow,
-  bubbleMark, rowMark, searchKey, sheetSummary, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
+  bubbleMark, entryOrder, rowMark, searchKey, sheetSummary, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
   invalidQuestions, lettersFor, nextStudent, pointsError, progress, reduceKey, setActive, sheetFromResult,
   entryFeedback, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
 } from './exam-entry.logic';
@@ -355,7 +355,8 @@ export class ExamEntryComponent implements OnInit {
   readonly questions = computed(() => sortQuestions(this.exam()?.questions ?? []));
   readonly runs = computed(() => groupRuns(this.questions()));
   readonly rows = computed(() => buildStudentList(this.roster(), this.results(), this.extras()));
-  readonly filteredRows = computed(() => filterStudents(this.rows(), this.search()));
+  /** Students still to enter come first: the screen is mainly for entering new answers. */
+  readonly filteredRows = computed(() => entryOrder(filterStudents(this.rows(), this.search())));
   readonly doneCount = computed(() => this.rows().filter(r => r.result).length);
   readonly currentRow = computed(() => this.rows().find(r => r.studentNo === this.current()) ?? null);
   readonly nextRow = computed(() => nextStudent(this.rows(), this.current()));

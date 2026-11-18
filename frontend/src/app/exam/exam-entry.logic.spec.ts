@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ExamResultDto, QuestionDto } from '../core/api.models';
 import {
-  buildRequest, buildStudentList, bubbleMark, clickBubble, emptyCell, emptySheet, entryFeedback, filterStudents, foldTr, formatPoints,
+  buildRequest, buildStudentList, bubbleMark, clickBubble, emptyCell, emptySheet, entryFeedback, entryOrder, filterStudents, foldTr, formatPoints,
   groupRuns, invalidQuestions, keyLetter, lettersFor, nextStudent, parsePoints, pointsError, progress, reduceKey,
   rowMark, searchKey, sheetFromResult, sheetSignature, sheetSummary, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
   type KeyOutcome, type Sheet,
@@ -326,6 +326,7 @@ describe('students', () => {
     expect(rows.find(r => r.studentNo === '20219999')).toMatchObject({ inRoster: false, fullName: 'Misafir' });
     expect(rows.find(r => r.studentNo === '20210003')).toMatchObject({ inRoster: true, fullName: 'Can Şahin' });
     expect(rows.map(studentStatus)).toEqual(['none', 'complete', 'none', 'none', 'partial']);
+    expect(entryOrder(rows).map(r => r.studentNo)).toEqual(['1', '20210003', '20210010', '20210002', '20219999']);
   });
 
   it('sorts numerically when lengths differ', () => {
