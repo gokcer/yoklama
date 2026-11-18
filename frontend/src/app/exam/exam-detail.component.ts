@@ -2,6 +2,7 @@ import { Component, computed, inject, input, OnInit, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { errorMessage } from '../shared/errors';
+import { ExamExportDialogComponent } from './exam-export-dialog.component';
 import type { ExamAnalysisDto, ExamDto, ExamResultDto, RosterEntryDto } from '../core/api.models';
 import {
   barWidth, choiceBars, filterRows, formatExamDate, formatNumber, formatPercent, mergeRows, QUESTION_TYPE_LABELS,
@@ -10,7 +11,7 @@ import {
 
 @Component({
   selector: 'app-exam-detail',
-  imports: [RouterLink],
+  imports: [RouterLink, ExamExportDialogComponent],
   template: `
     <div class="container-wide">
       <nav class="breadcrumb" aria-label="Konum">
@@ -32,7 +33,7 @@ import {
           <div class="flex-gap actions">
             <a class="btn btn-primary btn-sm" [routerLink]="['/t/exams', id(), 'entry']">Cevap gir</a>
             <a class="btn btn-outline btn-sm" [routerLink]="['/t/exams', id(), 'edit']">Düzenle</a>
-            <a class="btn btn-outline btn-sm" [href]="api.examCsvUrl(id())" download>CSV indir</a>
+            <button type="button" class="btn btn-outline btn-sm" (click)="showExport.set(true)">Not dışa aktar</button>
             <a class="btn btn-outline btn-sm" [routerLink]="['/t/courses', e.courseId, 'learning']">Öğrenme durumu</a>
           </div>
         </div>
@@ -201,6 +202,9 @@ import {
             <p class="text-secondary">Yükleniyor…</p>
           }
         }
+        @if (showExport()) {
+          <app-exam-export-dialog [exam]="e" [roster]="roster()" [results]="results()" (closed)="showExport.set(false)" />
+        }
       } @else if (!error()) {
         <p class="text-secondary">Yükleniyor…</p>
       }
@@ -255,6 +259,7 @@ export class ExamDetailComponent implements OnInit {
   readonly error = signal('');
   readonly analysisError = signal('');
   readonly tab = signal<'results' | 'analysis'>('results');
+  readonly showExport = signal(false);
   readonly query = signal('');
   readonly filter = signal<ResultFilter>('ALL');
 
