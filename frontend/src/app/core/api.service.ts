@@ -69,6 +69,20 @@ export class ApiService {
   deleteCalibrationRun(sessionId: number, runId: number) { return firstValueFrom(this.http.delete<void>(`/api/sessions/${sessionId}/calibration-runs/${runId}`)); }
   reevaluate(sessionId: number) { return firstValueFrom(this.http.post<{ updated: number }>(`/api/sessions/${sessionId}/reevaluate`, {})); }
 
+  /* Exams (docs/11-EXAMS.md) */
+  getExams(courseId: number | string) { return firstValueFrom(this.http.get<M.ExamSummaryDto[]>(`/api/courses/${courseId}/exams`)); }
+  createExam(courseId: number | string, e: M.ExamRequest) { return firstValueFrom(this.http.post<M.ExamDto>(`/api/courses/${courseId}/exams`, e)); }
+  getExam(id: number | string) { return firstValueFrom(this.http.get<M.ExamDto>(`/api/exams/${id}`)); }
+  updateExam(id: number | string, e: M.ExamRequest) { return firstValueFrom(this.http.put<M.ExamDto>(`/api/exams/${id}`, e)); }
+  deleteExam(id: number | string) { return firstValueFrom(this.http.delete<void>(`/api/exams/${id}`)); }
+  getExamResults(examId: number | string) { return firstValueFrom(this.http.get<M.ExamResultDto[]>(`/api/exams/${examId}/results`)); }
+  saveExamResult(examId: number | string, studentNo: string, r: M.ExamResultRequest) { return firstValueFrom(this.http.put<M.ExamResultDto>(`/api/exams/${examId}/results/${encodeURIComponent(studentNo)}`, r)); }
+  deleteExamResult(examId: number | string, studentNo: string) { return firstValueFrom(this.http.delete<void>(`/api/exams/${examId}/results/${encodeURIComponent(studentNo)}`)); }
+  getExamAnalysis(examId: number | string) { return firstValueFrom(this.http.get<M.ExamAnalysisDto>(`/api/exams/${examId}/analysis`)); }
+  examCsvUrl(examId: number | string) { return `/api/exams/${examId}/results.csv`; }
+  getCourseLearning(courseId: number | string) { return firstValueFrom(this.http.get<M.CourseLearningDto>(`/api/courses/${courseId}/learning`)); }
+  getStudentLearning(courseId: number | string, studentNo: string) { return firstValueFrom(this.http.get<M.StudentLearningDto>(`/api/courses/${courseId}/learning/students/${encodeURIComponent(studentNo)}`)); }
+
   /* Public */
   getPublicSession(code: string) { return firstValueFrom(this.http.get<M.PublicSessionDto>(`/api/public/sessions/${encodeURIComponent(code)}`)); }
   startCheckin(sessionCode: string, studentNo: string, client: Record<string, unknown>) { return firstValueFrom(this.http.post<M.CheckinStartResponse>('/api/public/checkins', { sessionCode, studentNo, client })); }

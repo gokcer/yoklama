@@ -104,3 +104,12 @@ Fazlar **sırayla** uygulanır. Her faz bitiminde: ilgili testler yazılır ve g
 - [x] 10 §4 manuel test listesinin README'ye kopyalanması (işaretlenecek şekilde)
 
 **Kabul:** `docker compose up` ile HTTPS altında tüm akış çalışır; `./mvnw verify` ve `npm test` yeşil.
+
+## Faz 12 — Sınavlar ve öğrenme takibi (`docs/11-EXAMS.md`)
+- [x] `V2__exams.sql`, `exam` paketi: sınav/soru CRUD, sonuç upsert, otomatik puanlama ve yeniden puanlama (11 §2–3.3)
+- [x] Analiz uç noktaları: sınav analizi, ders öğrenme durumu, öğrenci detayı, CSV (11 §3.4–3.5)
+- [x] `ExamEditComponent`: soru tablosu, toplu ekle, cevap anahtarı (11 §4.1); ders detayında "Sınavlar" bölümü
+- [x] `ExamEntryComponent`: klavyeyle hızlı cevap girişi (11 §4.2)
+- [x] `ExamDetailComponent` ve `CourseLearningComponent` (11 §4.3–4.4)
+
+**Kabul:** 25 soruluk 4 seçenekli sınav tanımlanır; bir öğrencinin cevapları yalnızca klavyeyle girilip kaydedilince puan görünür; analizde soru/konu başarıları ve zayıf öğrenciler listelenir; `./mvnw verify` yeşil.

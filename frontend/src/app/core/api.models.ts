@@ -59,3 +59,58 @@ export interface CompleteResponse { result: string; studentNo: string; studentNa
 export interface TeacherDto { id: number; username: string; displayName: string; role: string; enabled: boolean; }
 export interface AttemptRejectedEvent { studentNo: string; code: string; at: string; }
 export interface SessionSseEvent { status: string; closesAt?: string; attendanceCount: number; flaggedPendingCount: number; }
+
+/* Exams (docs/11-EXAMS.md) */
+export type QuestionType = 'CHOICE' | 'OPEN' | 'FREE';
+export interface QuestionDto {
+  id: number; position: number; type: QuestionType; text: string | null; topic: string | null;
+  maxPoints: number; choiceCount: number | null; correctChoice: string | null;
+}
+export interface QuestionRequest {
+  id?: number | null; type: QuestionType; text?: string | null; topic?: string | null;
+  maxPoints: number; choiceCount?: number | null; correctChoice?: string | null;
+}
+export interface ExamDto {
+  id: number; courseId: number; courseCode: string; courseName: string; title: string;
+  examDate: string | null; totalPoints: number; resultCount: number; createdAt: string; questions: QuestionDto[];
+}
+export interface ExamSummaryDto {
+  id: number; courseId: number; title: string; examDate: string | null; questionCount: number;
+  totalPoints: number; resultCount: number; averagePoints: number | null; createdAt: string;
+}
+export interface ExamRequest { title: string; examDate?: string | null; questions: QuestionRequest[]; }
+export interface ExamAnswerDto { questionId: number; answer: string | null; points: number | null; }
+export interface ExamResultDto {
+  id: number; studentNo: string; fullName: string; note: string | null; totalPoints: number;
+  gradedCount: number; complete: boolean; updatedAt: string; answers: ExamAnswerDto[];
+}
+export interface ExamResultRequest { fullName?: string | null; note?: string | null; answers: ExamAnswerDto[]; }
+
+export interface QuestionAnalysisDto {
+  questionId: number; position: number; type: QuestionType; topic: string | null; maxPoints: number;
+  gradedCount: number; averagePoints: number | null; successRate: number | null;
+  /** CHOICE only; key "" counts blank answers. */
+  choiceCounts: Record<string, number> | null;
+}
+export interface ExamTopicAnalysisDto { topic: string; questionCount: number; maxPoints: number; successRate: number | null; weakStudentCount: number; }
+export interface ExamStudentAnalysisDto { studentNo: string; fullName: string; totalPoints: number; percent: number | null; complete: boolean; weakTopics: string[]; }
+export interface ExamAnalysisDto {
+  examId: number; totalPoints: number; resultCount: number;
+  average: number | null; median: number | null; min: number | null; max: number | null;
+  questions: QuestionAnalysisDto[]; topics: ExamTopicAnalysisDto[]; students: ExamStudentAnalysisDto[];
+}
+
+export interface WeakStudentDto { studentNo: string; fullName: string; successRate: number; }
+export interface CourseTopicDto { topic: string; questionCount: number; successRate: number | null; weakStudents: WeakStudentDto[]; }
+export interface CourseStudentDto { studentNo: string; fullName: string; examCount: number; percent: number | null; weakTopics: string[]; }
+export interface CourseLearningDto { courseId: number; exams: ExamSummaryDto[]; topics: CourseTopicDto[]; students: CourseStudentDto[]; }
+export interface StudentExamDto { examId: number; title: string; examDate: string | null; totalPoints: number; maxPoints: number; percent: number | null; complete: boolean; }
+export interface StudentTopicDto { topic: string; questionCount: number; earnedPoints: number; maxPoints: number; successRate: number | null; }
+export interface MissedQuestionDto {
+  examId: number; examTitle: string; position: number; topic: string | null; text: string | null;
+  answer: string | null; correctChoice: string | null; points: number; maxPoints: number;
+}
+export interface StudentLearningDto {
+  courseId: number; studentNo: string; fullName: string;
+  exams: StudentExamDto[]; topics: StudentTopicDto[]; missedQuestions: MissedQuestionDto[];
+}

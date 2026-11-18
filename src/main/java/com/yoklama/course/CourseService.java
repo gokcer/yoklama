@@ -3,6 +3,7 @@ package com.yoklama.course;
 import com.yoklama.common.ApiException;
 import com.yoklama.common.ErrorCode;
 import com.yoklama.config.AppProperties;
+import com.yoklama.exam.ExamRepository;
 import com.yoklama.security.CurrentTeacher;
 import com.yoklama.session.ClassSessionRepository;
 import com.yoklama.teacher.TeacherRole;
@@ -20,15 +21,17 @@ public class CourseService {
     private final CourseRepository courseRepo;
     private final RosterEntryRepository rosterRepo;
     private final ClassSessionRepository sessionRepo;
+    private final ExamRepository examRepo;
     private final CurrentTeacher currentTeacher;
     private final Pattern studentNoPattern;
 
     public CourseService(CourseRepository courseRepo, RosterEntryRepository rosterRepo,
-                         ClassSessionRepository sessionRepo, CurrentTeacher currentTeacher,
-                         AppProperties props) {
+                         ClassSessionRepository sessionRepo, ExamRepository examRepo,
+                         CurrentTeacher currentTeacher, AppProperties props) {
         this.courseRepo = courseRepo;
         this.rosterRepo = rosterRepo;
         this.sessionRepo = sessionRepo;
+        this.examRepo = examRepo;
         this.currentTeacher = currentTeacher;
         this.studentNoPattern = Pattern.compile(props.checkin().studentNoPattern());
     }
@@ -72,7 +75,7 @@ public class CourseService {
     @Transactional
     public void delete(long id) {
         Course c = get(id);
-        if (sessionRepo.existsByCourseId(id)) {
+        if (sessionRepo.existsByCourseId(id) || examRepo.existsByCourse_Id(id)) {
             throw new ApiException(ErrorCode.CONFLICT);
         }
         courseRepo.delete(c);

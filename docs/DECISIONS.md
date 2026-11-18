@@ -47,6 +47,18 @@ Biçim: `- [Faz N] karar — gerekçe`
 - [İnceleme] ESP32 firmware'i bağlantı başına yanıt saklar (08 §3.2); önceki tek global yanıt eşzamanlı bağlantılarda karışıyordu
 - [Özellik] Toplu yoklama: POST /api/sessions/{id}/attendances/bulk; numara listesi (satır başına bir numara, tire atlanır) manuel APPROVED olarak eklenir; zaten kayıtlı olanlar atlanır
 - [Özellik] Oturumu tekrar açma: POST /api/sessions/{id}/reopen; CLOSED oturum yeni kod ve epoch ile tekrar OPEN yapılır; mevcut kayıtlar korunur, geç gelen öğrenciler eklenebilir
+- [Özellik] Sınavlar ve öğrenme takibi `docs/11-EXAMS.md` ile tanımlandı; sınav derse bağlıdır, sahiplik dersten gelir — ayrı yetki modeli gerekmesin
+- [Özellik] Soru türleri: CHOICE (seçenekli, otomatik puan), OPEN (açık uçlu: cevap metni + elle puan), FREE (serbest: yalnızca puan) — "serbest" ile "açık uçlu" farkı cevap metninin saklanıp saklanmaması
+- [Özellik] Sorulara isteğe bağlı `topic` (konu/kazanım) eklendi — öğrenciye özel içerik ve toplu takviye planı için analiz anahtarı; konusuz sorular konu analizine girmez
+- [Özellik] CHOICE puanı her zaman sunucuda hesaplanır; cevap anahtarı sonradan girilebilir/değiştirilebilir ve mevcut cevaplar yeniden puanlanır — önce cevapları girip sonra anahtarı düzeltmek mümkün olsun
+- [Özellik] Sonuç kaydı öğrencinin tam cevap kümesidir (PUT, upsert); CHOICE'ta boş bırakılan soru satır olarak saklanır (0 puan), girilmemiş sorudan ayırt edilir
+- [Özellik] "Zayıf" eşiği sabit %50 (başarı oranı = kazanılan / puanlanmış sorunun azami puanı) — ayar eklemek yerine tek sabit
+- [Özellik] Roster'da olmayan öğrenciye de sınav sonucu girilebilir (ad, sonuç kaydında saklanır); sınavı olan ders silinemez
+- [Faz 12] Cevap formunda puan alanı `type="text" inputmode="decimal"` — `2,5` ve `2.5` kabul edilsin, yarım yazılmış değer silinmesin; aralık kaydetmeden önce denetlenir
+- [Faz 12] Cevap formunda Backspace / seçili baloncuğa tekrar tıklama soruyu "girilmedi"ye döndürür (boş değil); girilmemiş seçenekli sorular onayla boş olarak kaydedilir
+- [Faz 12] Doğru/yanlış işaretleri yalnızca kaydedilmiş sonuçta gösterilir — giriş sırasında cevap anahtarı görünmesin
+- [Faz 12] Sınav CSV'si yalnızca sonucu olan öğrencileri içerir; ortalama/ortanca 2 ondalığa yuvarlanır, oranlar yuvarlanmaz
+- [Faz 12] Roster'da ve hiçbir sonuçta olmayan öğrenci için öğrenme detayı `404`; var olmayan sonucu silmek `204`
 
 ## İnceleme ve iyileştirme (2026-10-27)
 - [İnceleme] Derslikler "Konumumu kullan": zoneless'ta geolocation geri çağrısı değişiklik algılamayı tetiklemiyordu, alanlar boş görünüyordu — `markForCheck()` ve "Konum alınıyor…" durumu eklendi

@@ -19,6 +19,7 @@
 | `checkin_attempt` | `CheckinAttempt` | Öğrencinin tek bir check-in denemesi |
 | `scan_record` | `ScanRecord` | Denemedeki her QR okuması |
 | `attendance` | `Attendance` | Kalıcı yoklama kaydı (yalnızca ACCEPTED/FLAGGED; reddedilenler burada tutulmaz) |
+| `exam`, `exam_question`, `exam_result`, `exam_answer` | `Exam`, `ExamQuestion`, `ExamResult`, `ExamAnswer` | Sınavlar ve soru bazında sonuçlar — şema ve kurallar `11-EXAMS.md` (`V2__exams.sql`) |
 
 ## 3. Durum makineleri
 

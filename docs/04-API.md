@@ -146,10 +146,11 @@ Sahiplik: öğretim üyesi yalnızca kendi ders/derslik/oturumlarını görür; 
 
 ### 4.2 Dersler ve roster
 - `GET /api/courses` → `[{id, code, name, rosterCount, createdAt}]`
-- `POST /api/courses` `{code, name}` · `PUT /api/courses/{id}` · `DELETE /api/courses/{id}` (oturumu varsa `409`)
+- `POST /api/courses` `{code, name}` · `PUT /api/courses/{id}` · `DELETE /api/courses/{id}` (oturumu veya sınavı varsa `409`)
 - `GET /api/courses/{id}/roster` → `[{studentNo, fullName}]`
 - `POST /api/courses/{id}/roster/import?mode=REPLACE|MERGE` — `multipart` `file` (CSV). Ayırıcı `;` veya `,` otomatik; UTF-8 (BOM'lu/BOM'suz); başlık satırı opsiyonel (`studentNo;fullName` veya `ogrenciNo;adSoyad`). → `{imported, skipped, errors:[{line, message}]}`
 - `POST /api/courses/{id}/roster` `{studentNo, fullName}` · `DELETE /api/courses/{id}/roster/{studentNo}`
+- Sınavlar, sonuç girişi ve öğrenme analizi uç noktaları: `11-EXAMS.md` §3
 
 ### 4.3 Derslikler
 - `GET/POST /api/classrooms`, `PUT/DELETE /api/classrooms/{id}` — `{name, latitude?, longitude?, radiusM?, bleBeaconId?}`

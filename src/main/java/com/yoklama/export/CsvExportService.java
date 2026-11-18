@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 @Service
 public class CsvExportService {
 
-    static final String BOM = "﻿";
-    static final String SEP = ";";
-    static final String NL = "\r\n";
+    public static final String BOM = "﻿";
+    public static final String SEP = ";";
+    public static final String NL = "\r\n";
     static final String HEADER = String.join(SEP,
             "ogrenciNo", "adSoyad", "durum", "katildi", "bayraklar", "gecikmeMs", "esikMs", "kaynak", "zaman", "not");
 
@@ -97,7 +97,7 @@ public class CsvExportService {
     }
 
     /** Quotes when needed and neutralises spreadsheet formulas (=, +, -, @, tab, CR at the start). */
-    static String esc(String val) {
+    public static String esc(String val) {
         if (val == null || val.isEmpty()) return "";
         boolean needsQuote = val.contains(SEP) || val.contains("\"") || val.contains("\n") || val.contains("\r");
         if ("=+-@\t\r".indexOf(val.charAt(0)) >= 0) {

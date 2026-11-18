@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { MSG } from '../shared/messages';
 import { errorMessage } from '../shared/errors';
-import type { CourseDto, RosterEntryDto, RosterImportResult, SessionDto } from '../core/api.models';
+import type { CourseDto, ExamSummaryDto, RosterEntryDto, RosterImportResult, SessionDto } from '../core/api.models';
 
 @Component({
   selector: 'app-course-detail',
@@ -16,8 +16,8 @@ import type { CourseDto, RosterEntryDto, RosterImportResult, SessionDto } from '
         <h1>{{ course() ? course()!.code + ' — ' + course()!.name : msg.courses.title }}</h1>
         <div class="flex-gap">
           <a class="btn btn-primary" [routerLink]="['/t/sessions/new']" [queryParams]="{ courseId: id() }">{{ msg.sessions.create }}</a>
-          <button class="btn btn-outline text-danger" (click)="deleteCourse()" [disabled]="sessions().length > 0"
-            [title]="sessions().length > 0 ? 'Oturumu olan ders silinemez' : 'Dersi sil'">Sil</button>
+          <button class="btn btn-outline text-danger" (click)="deleteCourse()" [disabled]="sessions().length > 0 || exams().length > 0"
+            [title]="sessions().length > 0 ? 'Oturumu olan ders silinemez' : exams().length > 0 ? 'Sınavı olan ders silinemez' : 'Dersi sil'">Sil</button>
         </div>
       </div>
       @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
@@ -78,6 +78,31 @@ import type { CourseDto, RosterEntryDto, RosterImportResult, SessionDto } from '
         </div>
       }
 
+      <div class="exam-head mt-md">
+        <h2>Sınavlar ({{ exams().length }})</h2>
+        <div class="flex-gap" style="flex-wrap:wrap">
+          <a class="btn btn-outline btn-sm" [routerLink]="['/t/courses', id(), 'learning']">Öğrenme durumu</a>
+          <a class="btn btn-primary btn-sm" [routerLink]="['/t/exams/new']" [queryParams]="{ courseId: id() }">Yeni sınav</a>
+        </div>
+      </div>
+      @if (exams().length === 0) {
+        <p class="text-secondary">Henüz sınav yok.</p>
+      }
+      @for (x of exams(); track x.id) {
+        <a class="card mb-md session-card" [routerLink]="['/t/exams', x.id]">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <div>
+              <strong>{{ x.title }}</strong>
+              <div class="text-sm text-secondary">{{ x.examDate ? formatExamDate(x.examDate) : 'Tarih yok' }} · {{ x.questionCount }} soru · {{ x.totalPoints }} puan</div>
+            </div>
+            <div class="text-sm text-secondary" style="text-align:right">
+              {{ x.resultCount }} sonuç
+              @if (x.averagePoints != null) { <div>Ortalama: {{ x.averagePoints.toFixed(1) }} / {{ x.totalPoints }}</div> }
+            </div>
+          </div>
+        </a>
+      }
+
       <h2 class="mt-md">{{ msg.courses.sessions }} ({{ sessions().length }})</h2>
       @if (sessions().length === 0) {
         <p class="text-secondary">{{ msg.sessions.noData }}</p>
@@ -100,6 +125,8 @@ import type { CourseDto, RosterEntryDto, RosterImportResult, SessionDto } from '
     </div>
   `,
   styles: [`
+    .exam-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .exam-head h2 { margin: 0; }
     .session-card { display: block; text-decoration: none; color: inherit; transition: border-color 0.15s; }
     .session-card:hover { text-decoration: none; border-color: var(--c-primary); }
     .roster-table { overflow: auto; max-height: 480px; border: 1px solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface); }
@@ -115,6 +142,7 @@ export class CourseDetailComponent implements OnInit {
   readonly course = signal<CourseDto | null>(null);
   readonly roster = signal<RosterEntryDto[]>([]);
   readonly sessions = signal<SessionDto[]>([]);
+  readonly exams = signal<ExamSummaryDto[]>([]);
   readonly importResult = signal<RosterImportResult | null>(null);
   readonly error = signal('');
   readonly rosterSearch = signal('');
@@ -130,14 +158,16 @@ export class CourseDetailComponent implements OnInit {
   async ngOnInit() { await this.run(() => this.load()); }
 
   async load() {
-    const [c, r, s] = await Promise.all([
+    const [c, r, s, x] = await Promise.all([
       this.api.getCourse(this.id()),
       this.api.getRoster(+this.id()),
       this.api.getSessions(this.id()),
+      this.api.getExams(this.id()),
     ]);
     this.course.set(c);
     this.roster.set(r);
     this.sessions.set(s);
+    this.exams.set(x);
   }
 
   private async run(fn: () => Promise<void>) {
@@ -181,6 +211,11 @@ export class CourseDetailComponent implements OnInit {
       await this.api.deleteCourse(+this.id());
       this.router.navigateByUrl('/t');
     });
+  }
+
+  formatExamDate(d: string) {
+    try { return new Date(d + 'T00:00:00').toLocaleDateString('tr-TR', { dateStyle: 'medium' }); }
+    catch { return d; }
   }
 
   statusLabel(s: string) { return (MSG.sessions.status as Record<string, string>)[s] ?? s; }

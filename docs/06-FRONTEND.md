@@ -50,6 +50,7 @@ Uygulama açılışında öğretim üyesi alanına girilirken `GET /api/auth/csr
 | `/t/login` | `LoginComponent` | — |
 | `/t` | `CoursesComponent` | `authGuard` |
 | `/t/courses/:id` | `CourseDetailComponent` (roster + oturumlar) | `authGuard` |
+| `/t/courses/:id/learning`, `/t/exams/…` | Sınav ekranları (`11-EXAMS.md` §4) | `authGuard` |
 | `/t/classrooms` | `ClassroomsComponent` | `authGuard` |
 | `/t/sessions/new` | `SessionCreateComponent` (`?courseId=`) | `authGuard` |
 | `/t/sessions/:id` | `SessionDashboardComponent` | `authGuard` |
