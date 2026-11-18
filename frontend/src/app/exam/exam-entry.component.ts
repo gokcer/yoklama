@@ -61,8 +61,10 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                       [attr.aria-current]="r.studentNo === current() ? 'true' : null">
                       <span class="sno text-mono">{{ r.studentNo }}</span>
                       <span class="sname">{{ r.fullName || '—' }}@if (!r.inRoster) { <span class="text-secondary" title="Ders listesinde yok"> *</span> }</span>
-                      <span class="badge" [class.badge-warning]="status(r) === 'partial'" [class.badge-success]="status(r) === 'complete'"
-                        [class.badge-none]="status(r) === 'none'">{{ statusLabel(r) }}@if (r.result) { · {{ num(r.result.totalPoints) }} }</span>
+                      @if (r.result) {
+                        <span class="badge" [class.badge-warning]="status(r) === 'partial'" [class.badge-success]="status(r) === 'complete'"
+                          [attr.title]="statusLabel(r)">@if (status(r) === 'partial') { Eksik · }{{ num(r.result.totalPoints) }}</span>
+                      } @else { <span></span> }
                     </button>
                   </li>
                 } @empty {
@@ -220,22 +222,21 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
     </div>
   `,
   styles: [`
-    .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--space-md); align-items: start; }
+    .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: var(--space-md); align-items: start; }
     .students { position: sticky; top: var(--space-sm); background: var(--c-surface); border: 1px solid var(--c-border);
       border-radius: var(--radius-md); padding: var(--space-sm); min-width: 0; }
     .list-toggle { display: none; width: 100%; justify-content: space-between; }
     .students-body { display: flex; flex-direction: column; gap: var(--space-sm); }
     .search { padding: 6px 10px; font-size: 0.875rem; }
     .student-list { list-style: none; margin: 0; padding: 0; max-height: calc(100vh - 300px); min-height: 120px; overflow: auto; }
-    .student { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; width: 100%;
+    .student { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: baseline; width: 100%;
       padding: 6px 8px; border: none; border-radius: var(--radius-sm); background: transparent; text-align: left; cursor: pointer; font-size: 0.85rem; }
     .student:hover { background: var(--c-primary-light); }
     .student.hl { outline: 2px solid var(--c-primary); outline-offset: -2px; }
     .student.selected { background: var(--c-primary); color: #fff; }
     .student.selected .text-secondary { color: inherit; }
-    .sname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sname { overflow-wrap: anywhere; line-height: 1.25; }
     .badge { text-transform: none; white-space: nowrap; }
-    .badge-none { background: var(--c-bg); color: var(--c-text-secondary); border: 1px solid var(--c-border); }
     .empty { padding: 6px 8px; }
     .manual { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--c-border); padding-top: var(--space-sm); }
     .manual .form-input { padding: 6px 10px; font-size: 0.875rem; }
