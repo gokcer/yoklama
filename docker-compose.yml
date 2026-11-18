@@ -3,7 +3,7 @@
 #   cp .env.example .env   # (optional — defaults work out of the box)
 #   docker compose up --build
 #
-# App:  http://localhost:8080
+# App:  http://localhost:8790
 # Login: admin / admin123  (or values from .env)
 
 services:
