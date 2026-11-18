@@ -3,7 +3,7 @@ import type { ExamResultDto, QuestionDto } from '../core/api.models';
 import {
   buildRequest, buildStudentList, bubbleMark, clickBubble, emptyCell, emptySheet, entryFeedback, filterStudents, foldTr, formatPoints,
   groupRuns, invalidQuestions, keyLetter, lettersFor, nextStudent, parsePoints, pointsError, progress, reduceKey,
-  rowMark, sheetFromResult, sheetSignature, sheetSummary, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
+  rowMark, searchKey, sheetFromResult, sheetSignature, sheetSummary, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
   type KeyOutcome, type Sheet,
 } from './exam-entry.logic';
 
@@ -420,5 +420,28 @@ describe('live marking', () => {
     expect(s.pendingKey).toBe(1);
     expect(s.ungraded).toBe(0);
     expect(s.percent).toBe(0.5);
+  });
+});
+
+describe('searchKey', () => {
+  const row = (studentNo: string) => ({ studentNo, fullName: '', inRoster: true, result: null });
+  const rows = [row('100'), row('101'), row('102')];
+
+  it('moves the highlight with arrows, clamped', () => {
+    expect(searchKey('ArrowDown', -1, rows, '')).toEqual({ hl: 0 });
+    expect(searchKey('ArrowDown', 2, rows, '')).toEqual({ hl: 2 });
+    expect(searchKey('ArrowUp', 0, rows, '')).toEqual({ hl: 0 });
+    expect(searchKey('ArrowUp', 2, rows, '')).toEqual({ hl: 1 });
+    expect(searchKey('ArrowDown', -1, [], '')).toBeNull();
+  });
+  it('opens the highlighted row, a single match or an exact number on Enter', () => {
+    expect(searchKey('Enter', 1, rows, '')).toEqual({ open: '101' });
+    expect(searchKey('Enter', -1, [row('7')], '7')).toEqual({ open: '7' });
+    expect(searchKey('Enter', -1, rows, ' 102 ')).toEqual({ open: '102' });
+  });
+  it('highlights the first row on Enter with several matches and nothing chosen', () => {
+    expect(searchKey('Enter', -1, rows, '10')).toEqual({ hl: 0 });
+    expect(searchKey('Enter', -1, [], 'x')).toBeNull();
+    expect(searchKey('a', 0, rows, '')).toBeNull();
   });
 });

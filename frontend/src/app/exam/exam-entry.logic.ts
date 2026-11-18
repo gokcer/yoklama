@@ -428,3 +428,28 @@ export function entryFeedback(q: QuestionDto | undefined, before: Cell, after: C
   if (!key || !(LETTERS as readonly string[]).includes(key)) return null;
   return after.answer === key ? 'ok' : (key as EntryFeedback);
 }
+
+/* ---------- student search box keyboard ---------- */
+
+export type SearchOutcome = { hl: number } | { open: string } | null;
+
+/**
+ * Keys in the student search box. `hl` is the highlighted index in `rows` (-1 = none).
+ * ↑/↓ move the highlight; Enter opens the highlighted row, the only row left, or an exact student number;
+ * otherwise Enter highlights the first row. Other keys → null (default behaviour).
+ */
+export function searchKey(key: string, hl: number, rows: readonly StudentRow[], query: string): SearchOutcome {
+  const n = rows.length;
+  switch (key) {
+    case 'ArrowDown': return n ? { hl: Math.min(n - 1, hl + 1) } : null;
+    case 'ArrowUp': return n ? { hl: Math.max(0, hl - 1) } : null;
+    case 'Enter': {
+      if (hl >= 0 && hl < n) return { open: rows[hl].studentNo };
+      if (n === 1) return { open: rows[0].studentNo };
+      const exact = rows.find(r => r.studentNo === query.trim());
+      if (exact) return { open: exact.studentNo };
+      return n ? { hl: 0 } : null;
+    }
+    default: return null;
+  }
+}

@@ -8,7 +8,7 @@ import { errorMessage } from '../shared/errors';
 import type { ExamDto, ExamResultDto, QuestionDto, RosterEntryDto } from '../core/api.models';
 import {
   STATUS_LABEL, type Cell, type ResultSummary, type Sheet, type StudentRow,
-  bubbleMark, rowMark, sheetSummary, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
+  bubbleMark, rowMark, searchKey, sheetSummary, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
   invalidQuestions, lettersFor, nextStudent, pointsError, progress, reduceKey, setActive, sheetFromResult,
   entryFeedback, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
 } from './exam-entry.logic';
@@ -50,12 +50,14 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
               <span>Öğrenciler · {{ doneCount() }}/{{ rows().length }} girildi</span><span aria-hidden="true">{{ listOpen() ? '▴' : '▾' }}</span>
             </button>
             <div class="students-body">
-              <input class="form-input search" type="search" placeholder="Numara veya ad ara" aria-label="Öğrenci ara"
-                [value]="search()" (input)="search.set($any($event.target).value)" (keydown.enter)="pickFirstMatch($event)" />
-              <ul class="student-list">
-                @for (r of filteredRows(); track r.studentNo) {
+              <input #searchBox class="form-input search" type="search" placeholder="Numara veya ad ara" aria-label="Öğrenci ara"
+                role="combobox" aria-controls="student-list" [attr.aria-expanded]="true"
+                [attr.aria-activedescendant]="hl() >= 0 ? 'stu-' + hl() : null"
+                [value]="search()" (input)="onSearchInput($any($event.target).value)" (keydown)="onSearchKey($event)" />
+              <ul class="student-list" id="student-list">
+                @for (r of filteredRows(); track r.studentNo; let k = $index) {
                   <li>
-                    <button type="button" class="student" [class.selected]="r.studentNo === current()" (click)="selectStudent(r.studentNo)"
+                    <button type="button" class="student" [id]="'stu-' + k" [class.selected]="r.studentNo === current()" [class.hl]="k === hl()" (click)="selectStudent(r.studentNo)"
                       [attr.aria-current]="r.studentNo === current() ? 'true' : null">
                       <span class="sno text-mono">{{ r.studentNo }}</span>
                       <span class="sname">{{ r.fullName || '—' }}@if (!r.inRoster) { <span class="text-secondary" title="Ders listesinde yok"> *</span> }</span>
@@ -120,7 +122,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                   @if (shownResult()) {
                   <div class="result-actions">
                     @if (nextRow(); as n) {
-                      <button #nextBtn type="button" class="btn btn-primary" (click)="selectStudent(n.studentNo)">
+                      <button type="button" class="btn btn-primary" (click)="selectStudent(n.studentNo)">
                         Sonraki öğrenci: {{ n.studentNo }} {{ n.fullName }} →
                       </button>
                     } @else {
@@ -228,6 +230,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
     .student { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; width: 100%;
       padding: 6px 8px; border: none; border-radius: var(--radius-sm); background: transparent; text-align: left; cursor: pointer; font-size: 0.85rem; }
     .student:hover { background: var(--c-primary-light); }
+    .student.hl { outline: 2px solid var(--c-primary); outline-offset: -2px; }
     .student.selected { background: var(--c-primary); color: #fff; }
     .student.selected .text-secondary { color: inherit; }
     .sname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -323,7 +326,7 @@ export class ExamEntryComponent implements OnInit {
   readonly student = input<string>();
 
   private readonly sheetEl = viewChild<ElementRef<HTMLElement>>('sheetBox');
-  private readonly nextBtn = viewChild<ElementRef<HTMLButtonElement>>('nextBtn');
+  private readonly searchEl = viewChild<ElementRef<HTMLInputElement>>('searchBox');
   private readonly startBtn = viewChild<ElementRef<HTMLButtonElement>>('startBtn');
 
   readonly exam = signal<ExamDto | null>(null);
@@ -336,6 +339,8 @@ export class ExamEntryComponent implements OnInit {
   readonly saving = signal(false);
 
   readonly search = signal('');
+  /** Highlighted index in filteredRows (-1 = none), driven by the search box arrows. */
+  readonly hl = signal(-1);
   readonly manualNo = signal('');
   readonly manualName = signal('');
   readonly listOpen = signal(true);
@@ -422,10 +427,34 @@ export class ExamEntryComponent implements OnInit {
     this.syncUrl(no, false);
   }
 
-  pickFirstMatch(e: Event) {
+  onSearchInput(value: string) {
+    this.search.set(value);
+    this.hl.set(-1);
+  }
+
+  /** ↑/↓ highlight a student, Enter opens it (or the only match / an exact number). */
+  onSearchKey(e: KeyboardEvent) {
+    if (e.isComposing || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const o = searchKey(e.key, this.hl(), this.filteredRows(), this.search());
+    if (!o) return;
     e.preventDefault();
-    const first = this.filteredRows()[0];
-    if (first) this.selectStudent(first.studentNo);
+    if ('open' in o) { this.hl.set(-1); this.selectStudent(o.open); return; }
+    this.hl.set(o.hl);
+    this.afterRender(() => document.getElementById('stu-' + o.hl)?.scrollIntoView({ block: 'nearest' }));
+  }
+
+  /** After saving the next step is finding a student: focus the search box with its text selected. */
+  private focusSearch() {
+    this.listOpen.set(true);
+    const next = this.nextRow();
+    this.hl.set(next ? this.filteredRows().findIndex(r => r.studentNo === next.studentNo) : -1);
+    this.afterRender(() => {
+      const el = this.searchEl()?.nativeElement;
+      if (!el) return;
+      el.focus();
+      el.select();
+      if (this.hl() >= 0) document.getElementById('stu-' + this.hl())?.scrollIntoView({ block: 'nearest' });
+    });
   }
 
   addManual(e: Event) {
@@ -461,6 +490,7 @@ export class ExamEntryComponent implements OnInit {
     this.baseline.set(sheetSignature(qs, s));
     this.saved.set(null);
     this.error.set('');
+    this.hl.set(-1);
     if (no !== null) {
       this.listOpen.set(false);
       this.focusActive();
@@ -609,10 +639,7 @@ export class ExamEntryComponent implements OnInit {
       this.sheet.set(s);
       this.baseline.set(sheetSignature(qs, s));
       this.saved.set({ studentNo: no, summary: summarize(qs, exam.totalPoints, res) });
-      this.afterRender(() => {
-        const btn = this.nextBtn()?.nativeElement;
-        if (btn) btn.focus(); else this.sheetEl()?.nativeElement.focus({ preventScroll: true });
-      });
+      this.focusSearch();
     } catch (e) {
       this.error.set(errorMessage(e));
     } finally {
