@@ -10,8 +10,9 @@ import {
   STATUS_LABEL, type Cell, type ResultSummary, type Sheet, type StudentRow,
   bubbleMark, buildRequest, buildStudentList, clickBubble, emptySheet, filterStudents, formatPoints, groupRuns,
   invalidQuestions, lettersFor, nextStudent, pointsError, progress, reduceKey, setActive, sheetFromResult,
-  sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
+  entryFeedback, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
 } from './exam-entry.logic';
+import { EntrySounds } from './entry-sounds';
 
 const NUM = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const PCT = new Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 1 });
@@ -141,6 +142,8 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
                 <kbd>A</kbd>–<kbd>F</kbd> işaretle · <kbd>Boşluk</kbd>/<kbd>-</kbd> boş · <kbd>⌫</kbd> geri dön ve sil ·
                 <kbd>←</kbd><kbd>→</kbd>/<kbd>Tab</kbd> gezin · <kbd>Enter</kbd> son soruda kaydet · <kbd>Ctrl/⌘</kbd>+<kbd>Enter</kbd> kaydet
                 @if (!sheetFocused() && activeQuestion()?.type === 'CHOICE') { <span class="focus-tip">· yazmak için kağıda tıklayın</span> }
+                · <button type="button" class="sound-toggle" (mousedown)="$event.preventDefault()" (click)="sounds.toggle()" [attr.aria-pressed]="sounds.enabled()"
+                    title="Cevap anahtarı olan seçenekli sorularda doğruysa kısa ton, yanlışsa doğru şık sesli okunur">{{ sounds.enabled() ? '🔊 Ses açık' : '🔇 Ses kapalı' }}</button>
               </p>
 
               <div #sheetBox class="sheet" tabindex="0" role="group" aria-label="Cevap kağıdı"
@@ -252,6 +255,7 @@ const UNSAVED = 'Kaydedilmemiş değişiklikler var. Kaydetmeden devam edilsin m
     .hint { margin: 4px 0 var(--space-sm); color: var(--c-text-secondary); line-height: 1.8; }
     kbd { font-family: var(--font-mono); font-size: 0.75rem; padding: 0 4px; border: 1px solid var(--c-border);
       border-bottom-width: 2px; border-radius: 3px; background: var(--c-surface); }
+    .sound-toggle { background: none; border: 0; padding: 0; font: inherit; color: var(--c-primary, inherit); cursor: pointer; text-decoration: underline dotted; }
     .focus-tip { color: var(--c-warning); font-weight: 600; filter: brightness(0.8); }
 
     .sheet { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: var(--space-sm); outline: none; }
@@ -305,6 +309,7 @@ export class ExamEntryComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly sounds = inject(EntrySounds);
 
   readonly id = input.required<string>();
   /** `?student=` query param (component input binding). */
@@ -365,6 +370,7 @@ export class ExamEntryComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.sounds.preload();
     try {
       const [exam, results] = await Promise.all([this.api.getExam(this.id()), this.api.getExamResults(this.id())]);
       this.exam.set(exam);
@@ -461,7 +467,9 @@ export class ExamEntryComponent implements OnInit {
     const o = reduceKey(this.questions(), this.sheet(), e);
     if (!o.handled) return;
     e.preventDefault();
+    const before = this.sheet();
     this.sheet.set(o.sheet);
+    this.feedback(before, o.sheet);
     if (o.rejected !== undefined) this.flashCue(o.rejected);
     if (o.save) { void this.save(); return; }
     this.focusActive();
@@ -481,8 +489,18 @@ export class ExamEntryComponent implements OnInit {
 
   onBubble(e: MouseEvent, i: number, letter: string) {
     e.stopPropagation();
-    this.sheet.update(s => clickBubble(this.questions(), s, i, letter));
+    const before = this.sheet();
+    this.sheet.set(clickBubble(this.questions(), before, i, letter));
+    this.feedback(before, this.sheet());
     this.focusActive();
+  }
+
+  /** Tone / spoken correct letter for the CHOICE question whose entry just changed. */
+  private feedback(before: Sheet, after: Sheet) {
+    const i = before.cells.findIndex((c, k) => c !== after.cells[k]);
+    if (i < 0) return;
+    const f = entryFeedback(this.questions()[i], before.cells[i], after.cells[i]);
+    if (f) this.sounds.play(f);
   }
 
   onCardClick(e: MouseEvent, i: number) {

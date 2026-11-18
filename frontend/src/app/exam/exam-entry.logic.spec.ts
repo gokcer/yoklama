@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ExamResultDto, QuestionDto } from '../core/api.models';
 import {
-  buildRequest, buildStudentList, bubbleMark, clickBubble, emptySheet, filterStudents, foldTr, formatPoints,
+  buildRequest, buildStudentList, bubbleMark, clickBubble, emptyCell, emptySheet, entryFeedback, filterStudents, foldTr, formatPoints,
   groupRuns, invalidQuestions, keyLetter, lettersFor, nextStudent, parsePoints, pointsError, progress, reduceKey,
   sheetFromResult, sheetSignature, sortQuestions, studentStatus, summarize, unenteredChoices, updateCell, upsertResult,
   type KeyOutcome, type Sheet,
@@ -366,5 +366,29 @@ describe('students', () => {
     const replaced = upsertResult(r, result('20210002', [], { totalPoints: 1 }));
     expect(replaced).toHaveLength(3);
     expect(replaced.find(x => x.studentNo === '20210002')?.totalPoints).toBe(1);
+  });
+});
+
+describe('entryFeedback', () => {
+  const q = (correctChoice: string | null, type: 'CHOICE' | 'OPEN' = 'CHOICE') =>
+    ({ id: 1, position: 1, type, text: null, topic: null, maxPoints: 1, choiceCount: 5, correctChoice }) as QuestionDto;
+  const cell = (entered: boolean, answer: string | null) => ({ ...emptyCell(), entered, answer });
+
+  it('returns ok for the key letter (case-insensitive key)', () => {
+    expect(entryFeedback(q('c'), emptyCell(), cell(true, 'C'))).toBe('ok');
+  });
+  it('returns the key letter for a wrong letter or a blank', () => {
+    expect(entryFeedback(q('B'), emptyCell(), cell(true, 'D'))).toBe('B');
+    expect(entryFeedback(q('B'), emptyCell(), cell(true, null))).toBe('B');
+  });
+  it('stays silent without a key, on clearing, on unchanged entries and for non-choice questions', () => {
+    expect(entryFeedback(q(null), emptyCell(), cell(true, 'A'))).toBeNull();
+    expect(entryFeedback(q('A'), cell(true, 'A'), emptyCell())).toBeNull();
+    expect(entryFeedback(q('A'), cell(true, 'B'), cell(true, 'B'))).toBeNull();
+    expect(entryFeedback(q('A', 'OPEN'), emptyCell(), cell(true, 'A'))).toBeNull();
+    expect(entryFeedback(undefined, emptyCell(), cell(true, 'A'))).toBeNull();
+  });
+  it('announces again when the answer changes', () => {
+    expect(entryFeedback(q('A'), cell(true, 'B'), cell(true, 'A'))).toBe('ok');
   });
 });

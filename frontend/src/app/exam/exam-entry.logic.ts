@@ -381,3 +381,21 @@ export function nextStudent(rows: readonly StudentRow[], currentNo: string | nul
 export function upsertResult(results: readonly ExamResultDto[], r: ExamResultDto): ExamResultDto[] {
   return [...results.filter(x => x.studentNo !== r.studentNo), r].sort((a, b) => compareStudentNo(a.studentNo, b.studentNo));
 }
+
+/* ---------- live answer-key feedback ---------- */
+
+/** 'ok' = the entered letter matches the key; a letter = the correct choice to announce. */
+export type EntryFeedback = 'ok' | (typeof LETTERS)[number];
+
+/**
+ * Feedback for a CHOICE entry that just changed `before` → `after`: null when the question has no key,
+ * nothing new was entered (clearing, re-entering the same value) or the key is not a valid letter.
+ * A blank entry counts as wrong.
+ */
+export function entryFeedback(q: QuestionDto | undefined, before: Cell, after: Cell): EntryFeedback | null {
+  if (!q || q.type !== 'CHOICE' || !after.entered) return null;
+  if (before.entered && before.answer === after.answer) return null;
+  const key = q.correctChoice?.toUpperCase();
+  if (!key || !(LETTERS as readonly string[]).includes(key)) return null;
+  return after.answer === key ? 'ok' : (key as EntryFeedback);
+}
